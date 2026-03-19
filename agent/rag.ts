@@ -84,7 +84,7 @@ function tokenize(text: string): string[] {
 export function getRelevantFiles(
   rootDir: string,
   query: string,
-  topK: number = 5
+  topK: number = 10
 ): { relativePath: string; content: string }[] {
   // Re-index if stale
   if (Date.now() - lastIndexTime > INDEX_TTL || fileIndex.length === 0) {
@@ -92,6 +92,9 @@ export function getRelevantFiles(
   }
 
   const queryTokens = new Set(tokenize(query));
+  const queryLower = query.toLowerCase();
+  const isUITask = queryLower.includes("ui") || queryLower.includes("style") || queryLower.includes("css") || queryLower.includes("theme") || queryLower.includes("layout") || queryLower.includes("format");
+
   if (queryTokens.size === 0) {
     return fileIndex.slice(0, topK).map((f) => ({
       relativePath: f.relativePath,
@@ -101,11 +104,31 @@ export function getRelevantFiles(
 
   const scored = fileIndex.map((file) => {
     let score = 0;
+    const pathLower = file.relativePath.toLowerCase();
+    
     for (const token of queryTokens) {
       if (file.tokens.includes(token)) score++;
-      // Boost if query token appears in the file path
-      if (file.relativePath.toLowerCase().includes(token)) score += 2;
+      
+      // Path Boosting: If query token appears in file path, give it a HUGE boost
+      if (pathLower.includes(token)) score += 5;
     }
+
+    // Infrastructural Boosting
+    // Core files that define the theme/layout should almost always be visible in UI tasks
+    const isCoreInfra = 
+      pathLower.endsWith("globals.css") || 
+      pathLower.includes("tailwind.config") || 
+      pathLower.includes("package.json") ||
+      pathLower.includes("layout.tsx") ||
+      pathLower.includes("layout.jsx") ||
+      pathLower.includes("theme.ts") ||
+      pathLower.includes("header") || 
+      pathLower.includes("navbar");
+
+    if (isCoreInfra && isUITask) {
+      score += 10; // Massive boost for foundational files in UI tasks
+    }
+
     return { ...file, score };
   });
 
@@ -113,7 +136,7 @@ export function getRelevantFiles(
   const results = scored.slice(0, topK);
   
   if (results.length > 0 && results[0].score > 0) {
-    logger.log(`🎯 Top match: ${results[0].relativePath} (score: ${results[0].score})`);
+    logger.log(`🎯 Top RAG match: ${results[0].relativePath} (score: ${results[0].score})`);
   }
 
   return results.map((f) => ({
@@ -136,10 +159,37 @@ export function listFiles(rootDir: string): string[] {
  * Read a single file's content by relative path.
  */
 export function readFile(rootDir: string, relativePath: string): string | null {
+  logger.log(`📖 Reading file: ${relativePath}`);
   const fullPath = path.join(rootDir, relativePath);
   try {
     return fs.readFileSync(fullPath, "utf-8");
   } catch {
     return null;
   }
+}
+
+/**
+ * Returns a hierarchical string representing the project file structure.
+ */
+export function getProjectStructure(rootDir: string): string {
+  logger.log("🌿 Generating project structure string...");
+  if (fileIndex.length === 0) {
+    indexProject(rootDir);
+  }
+  
+  const paths = fileIndex.map(f => f.relativePath).sort();
+  let structure = "";
+  let lastParts: string[] = [];
+
+  for (const p of paths) {
+    const parts = p.split("/");
+    let indent = "";
+    for (let i = 0; i < parts.length; i++) {
+        if (parts[i] !== lastParts[i]) {
+            structure += "  ".repeat(i) + " - " + parts[i] + "\n";
+        }
+    }
+    lastParts = parts;
+  }
+  return structure;
 }

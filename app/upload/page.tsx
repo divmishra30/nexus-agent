@@ -43,22 +43,22 @@ export default function UploadPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold mb-8">Upload Files</h1>
-      <div className="flex flex-col gap-4">
-        <input type="file" onChange={handleFileChange} className="p-2 border rounded" />
+    <main className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-8 bg-gray-50">
+      <h1 className="text-4xl font-bold mb-8 text-gray-900 text-center">Upload File</h1>
+      <div className="flex flex-col items-center gap-4 w-full max-w-md bg-white p-8 rounded-lg shadow-xl border border-gray-200">
+        <input type="file" onChange={handleFileChange} className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full" />
         <button
           onClick={handleUpload}
           disabled={!selectedFile}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          className="px-6 py-3 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
         >
           Upload
         </button>
-        {message && <p className="mt-4 text-center">{message}</p>}
-        <Link href="/view-attachments" className="text-blue-500 hover:underline mt-4 text-center">
+        {message && <p className="mt-4 text-center text-gray-700">{message}</p>}
+        <Link href="/view-attachments" className="text-blue-600 hover:underline mt-4 text-center font-medium">
           View All Attachments
         </Link>
-        <Link href="/" className="text-blue-500 hover:underline mt-2 text-center">
+        <Link href="/" className="text-blue-600 hover:underline mt-2 text-center font-medium">
           Back to Home
         </Link>
       </div>

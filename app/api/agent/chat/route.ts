@@ -28,12 +28,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Use RAG to find relevant files
-    logger.log("🔍 Searching for relevant files...");
-    const relevantFiles = getRelevantFiles(PROJECT_ROOT, message, 5);
-    logger.log(`✅ Found ${relevantFiles.length} relevant files:`, relevantFiles.map(f => f.relativePath));
+    // 1. Multi-pass: Analyze intent first (Pure Prompt Refinement)
+    const { analyzeIntent } = require("@/agent/gemini");
+    const analysis = await analyzeIntent(message);
 
-    // 2. Build file context string
+    if (analysis.isAmbiguous) {
+      logger.log("⚠️ Intent analysis flagged as AMBIGUOUS, but proceeding with best-guess refinement.");
+    }
+
+    logger.log("✨ Intent analyzed. Refined prompt:", analysis.refinedPrompt);
+
+    // 2. Get project structure
+    logger.log("🔍 Fetching project structure...");
+    const { getProjectStructure, indexProject } = require("@/agent/rag");
+    const projectStructure = getProjectStructure(PROJECT_ROOT);
+
+    // 3. Get RAG context using REFINED prompt
+    logger.log("🔍 Fetching relevant files using refined prompt...");
+    const relevantFiles = getRelevantFiles(PROJECT_ROOT, analysis.refinedPrompt, 10);
+    logger.log(`✅ Found ${relevantFiles.length} relevant files.`);
+
+    // 4. Build file context string
     const fileContext = relevantFiles
       .map(
         (f) =>
@@ -41,49 +56,51 @@ export async function POST(request: NextRequest) {
       )
       .join("\n\n");
 
-    // 3. Ask Gemini
-    logger.log("🤖 Querying Gemini...");
-    const response = await askGemini(fileContext, message);
-    logger.log("✨ Gemini Response received.");
+    // 5. Ask Gemini for edits using REFINED prompt
+    logger.log("🤖 Querying Gemini for edits with refined prompt...");
+    const response = await askGemini(projectStructure, fileContext, analysis.refinedPrompt);
+    logger.log(`✨ Gemini Response received. Reply length: ${response.reply.length}, Edits: ${response.edits.length}`);
 
     // 4. Apply file edits if any
     const filesChanged: string[] = [];
     if (response.edits.length > 0) {
       logger.log(`🛠 Applying ${response.edits.length} file edits...`);
-    }
+      
+      for (const edit of response.edits) {
+        const targetPath = path.join(PROJECT_ROOT, edit.filePath);
 
-    for (const edit of response.edits) {
-      const targetPath = path.join(PROJECT_ROOT, edit.filePath);
+        // Safety: prevent writing outside project
+        if (!targetPath.startsWith(PROJECT_ROOT)) continue;
+        // Safety: prevent touching dangerous directories
+        if (
+          edit.filePath.startsWith("node_modules") ||
+          edit.filePath.startsWith(".git/") ||
+          edit.filePath.startsWith(".next/") ||
+          edit.filePath.startsWith(".env")
+        )
+          continue;
 
-      // Safety: prevent writing outside project
-      if (!targetPath.startsWith(PROJECT_ROOT)) continue;
-      // Safety: prevent touching dangerous directories
-      if (
-        edit.filePath.startsWith("node_modules") ||
-        edit.filePath.startsWith(".git/") ||
-        edit.filePath.startsWith(".next/") ||
-        edit.filePath.startsWith(".env")
-      )
-        continue;
-
-      if (edit.action === "delete") {
-        if (fs.existsSync(targetPath)) {
-          fs.unlinkSync(targetPath);
-          filesChanged.push(`deleted: ${edit.filePath}`);
+        if (edit.action === "delete") {
+          if (fs.existsSync(targetPath)) {
+            fs.unlinkSync(targetPath);
+            filesChanged.push(`deleted: ${edit.filePath}`);
+          }
+        } else {
+          // create or modify
+          const dir = path.dirname(targetPath);
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+          }
+          fs.writeFileSync(targetPath, edit.content, "utf-8");
+          const actionLabel = edit.action === "create" ? "created" : "modified";
+          logger.log(`💾 File ${actionLabel}: ${edit.filePath}`);
+          filesChanged.push(`${actionLabel}: ${edit.filePath}`);
         }
-      } else {
-        // create or modify
-        const dir = path.dirname(targetPath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-        fs.writeFileSync(targetPath, edit.content, "utf-8");
-        const actionLabel = edit.action === "create" ? "created" : "modified";
-        logger.log(`💾 File ${actionLabel}: ${edit.filePath}`);
-        filesChanged.push(
-          `${actionLabel}: ${edit.filePath}`
-        );
       }
+
+      // Re-index project so changes are visible in the next turn
+      logger.log("🔄 Re-indexing project after changes...");
+      indexProject(PROJECT_ROOT);
     }
 
     return NextResponse.json({

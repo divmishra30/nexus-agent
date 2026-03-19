@@ -38,8 +38,8 @@ export default function GoogleSearchPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-8 md:p-12 lg:p-24 bg-gray-50">
-      <h1 className="text-4xl font-bold mb-8 text-gray-900">Google Search</h1>
+    <main className="flex min-h-screen flex-col items-center py-12 px-4 sm:px-8 bg-gray-50">
+      <h1 className="text-4xl font-bold mb-8 text-gray-900 text-center">Google Search</h1>
 
       <form onSubmit={handleSearch} className="w-full max-w-lg mb-8 flex shadow-md rounded-lg overflow-hidden">
         <input
@@ -47,7 +47,7 @@ export default function GoogleSearchPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search Google..."
-          className="flex-grow p-4 text-lg border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-grow p-4 text-lg border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Search query input"
         />
         <button

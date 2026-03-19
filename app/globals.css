@@ -1,26 +1,174 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  -------------------------------------------------------------
+  Design Tokens
+  Standardized colors, typography, spacing, etc. for a cohesive UI.
+  -------------------------------------------------------------
+*/
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Colors - Fun & Vibrant Palette */
+  --color-background-default: #f0f8ff; /* Alice Blue - very light */
+  --color-background-light: #e0f2fe;  /* Light Blue */
+  --color-background-card: #ffffff;
+  --color-text-default: #2c3e50;    /* Dark Blue-Gray */
+  --color-text-muted: #7f8c8d;      /* Asbestos Gray */
+  --color-border-default: #b2e2f2;  /* Soft Blue Border */
+
+  --color-primary-50: #e3f2fd;
+  --color-primary-100: #bbdefb;
+  --color-primary-200: #90caf9;
+  --color-primary-300: #64b5f6;
+  --color-primary-400: #42a5f5;
+  --color-primary-500: #2196f3; /* Vibrant Blue */
+  --color-primary-600: #1976d2;
+  --color-primary-700: #1565c0;
+  --color-primary-800: #0d47a1;
+  --color-primary-900: #0d3880;
+
+  --color-secondary-50: #fce4ec;
+  --color-secondary-100: #f8bbd0;
+  --color-secondary-200: #f48fb1;
+  --color-secondary-300: #f06292;
+  --color-secondary-400: #ec407a;
+  --color-secondary-500: #e91e63; /* Playful Pink */
+  --color-secondary-600: #d81b60;
+  --color-secondary-700: #c2185b;
+  --color-secondary-800: #ad1457;
+  --color-secondary-900: #880e4f;
+
+  --color-success-50: #e8f5e9;
+  --color-success-600: #4caf50; /* Green */
+  --color-error-50: #ffebee;
+  --color-error-600: #f44336;   /* Red */
+  --color-warning-50: #fffde7;
+  --color-warning-600: #ffc107; /* Amber */
+
+  /* Typography - Playful yet readable */
+  --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  --font-size-base: 16px;
+  --font-size-sm: 14px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 26px; /* Slightly larger for fun */
+  --font-size-3xl: 34px;
+  --font-size-4xl: 42px;
+  --line-height-base: 1.6;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 850; /* Extra bold for impact */
+
+  /* Spacing Scale (based on 0.25rem or 4px grid) */
+  --spacing-0: 0;
+  --spacing-1: 0.25rem; /* 4px */
+  --spacing-2: 0.5rem;  /* 8px */
+  --spacing-3: 0.75rem; /* 12px */
+  --spacing-4: 1rem;    /* 16px */
+  --spacing-5: 1.25rem; /* 20px */
+  --spacing-6: 1.5rem;  /* 24px */
+  --spacing-8: 2rem;    /* 32px */
+  --spacing-10: 2.5rem; /* 40px */
+  --spacing-12: 3rem;   /* 48px */
+  --spacing-16: 4rem;   /* 64px */
+
+  /* Border Radius - Softer, more rounded */
+  --radius-sm: 0.5rem;  /* 8px */
+  --radius-md: 0.75rem; /* 12px */
+  --radius-lg: 1rem;    /* 16px */
+  --radius-xl: 1.5rem;  /* 24px */
+  --radius-2xl: 2rem;   /* 32px */
+  --radius-full: 9999px;
+
+  /* Shadows - Softer, more playful */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.2), 0 10px 20px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 32px 64px rgba(0, 0, 0, 0.3);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* Dark Mode Adjustments */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-background-default: #1a202c;
+    --color-background-light: #2d3748;
+    --color-background-card: #2d3748;
+    --color-text-default: #e2e8f0;
+    --color-text-muted: #a0aec0;
+    --color-border-default: #4a5568;
+
+    /* Adjust primary colors for dark mode if needed */
+    --color-primary-50: #1a237e;
+    --color-primary-100: #283593;
+    --color-primary-200: #303f9f;
+    --color-primary-300: #3949ab;
+    --color-primary-400: #3f51b5;
+    --color-primary-500: #5c6bc0;
+    --color-primary-600: #7986cb;
+    --color-primary-700: #9fa8da;
+    --color-primary-800: #c5cae9;
+    --color-primary-900: #e8eaf6;
+
+    --color-secondary-500: #f48fb1; /* Keep a bright secondary in dark mode */
   }
 }
 
+/* Base element styling using new tokens */
+html {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background-default);
+  color: var(--color-text-default);
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease-in-out;
+}
+
+/* Ensure images and media elements are responsive by default */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-default);
+  line-height: 1.2;
+}
+
+h1 { font-size: var(--font-size-4xl); font-weight: var(--font-weight-extrabold); margin-bottom: var(--spacing-4); }
+h2 { font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); margin-bottom: var(--spacing-3); }
+h3 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); margin-bottom: var(--spacing-2); }
+p { font-size: var(--font-size-base); margin-bottom: var(--spacing-2); }
+
+a {
+  color: var(--color-primary-600);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+a:hover {
+  text-decoration: underline;
+  color: var(--color-secondary-500); /* Fun hover color */
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-family-sans);
+  font-weight: var(--font-weight-semibold);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }

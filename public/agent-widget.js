@@ -7,8 +7,6 @@
 
   // ── Styles ───────────────────────────────────────────────
   const STYLES = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
     #nexus-agent-root * {
       box-sizing: border-box;
       margin: 0;
@@ -280,34 +278,6 @@
       fill: currentColor;
     }
 
-    /* ── Git Bar ─────────────────────────────────────────── */
-    .na-git-bar {
-      padding: 12px 24px 20px 24px; /* Increased bottom padding */
-      background: #fcfcfd;
-      border-top: 1px solid var(--na-border);
-      display: flex;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-    .na-git-bar input {
-      flex: 1;
-      background: transparent;
-      border: 1px solid var(--na-border);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 12px;
-      outline: none;
-    }
-    .na-git-btn {
-      background: var(--na-accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 0 16px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
 
     /* ── Typing ──────────────────────────────────────────── */
     .na-typing {
@@ -384,10 +354,6 @@
         </button>
       </div>
     </div>
-    <div class="na-git-bar">
-      <input id="na-commit-msg" type="text" placeholder="Commit message..." />
-      <button class="na-git-btn" id="na-commit-btn">Push Changes</button>
-    </div>
   `;
   root.appendChild(panel);
   document.body.appendChild(root);
@@ -397,8 +363,6 @@
   const input = document.getElementById("na-input");
   const sendBtn = document.getElementById("na-send-btn");
   const clearBtn = document.getElementById("na-clear-btn");
-  const commitMsg = document.getElementById("na-commit-msg");
-  const commitBtn = document.getElementById("na-commit-btn");
 
   let isOpen = false;
   let isLoading = false;
@@ -480,10 +444,7 @@
       if (data.error) {
         addMessage("⚠ " + data.error, "error");
       } else {
-        var msgEl = addMessage(data.reply || "Done.", "agent");
-        if (data.filesChanged && data.filesChanged.length > 0) {
-          addFileBadge(msgEl, data.filesChanged);
-        }
+        addMessage(data.reply || "Done.", "agent");
       }
     } catch (err) {
       hideTyping();
@@ -517,37 +478,4 @@
     `;
   });
 
-  // ── Commit & Push ───────────────────────────────────────
-  commitBtn.addEventListener("click", async function () {
-    var msg = commitMsg.value.trim();
-    if (!msg) {
-      commitMsg.style.borderColor = "var(--na-error)";
-      setTimeout(function () { commitMsg.style.borderColor = ""; }, 1500);
-      return;
-    }
-
-    commitBtn.disabled = true;
-    commitBtn.textContent = "Pushing…";
-
-    try {
-      var res = await fetch("/api/agent/git", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg }),
-      });
-      var data = await res.json();
-
-      if (data.success) {
-        addMessage("✅ Committed & pushed: " + (data.commitHash || "OK"), "agent");
-        commitMsg.value = "";
-      } else {
-        addMessage("⚠ Git error: " + (data.error || "Unknown error"), "error");
-      }
-    } catch (err) {
-      addMessage("⚠ Network error: " + err.message, "error");
-    }
-
-    commitBtn.disabled = false;
-    commitBtn.textContent = "Push Changes";
-  });
 })();
