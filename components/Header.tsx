@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -9,53 +9,81 @@ export default function Header() {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  // Common classes for navigation links
-  const baseLinkClasses = "block px-[var(--spacing-3)] py-[var(--spacing-2)] rounded-[var(--radius-sm)] text-[var(--font-size-lg)] font-[var(--font-weight-medium)] text-white";
-  const hoverFocusLinkClasses = "hover:bg-[rgba(255,255,255,0.15)] hover:text-[var(--color-primary-100)] transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-200)] focus:ring-offset-2 focus:ring-offset-[var(--color-primary-700)]";
+  // Close menu on resize when transitioning to desktop view
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 640 && isMenuOpen) { // Tailwind's 'sm' breakpoint is 640px
+        setIsMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMenuOpen]);
+
+  // Common classes for navigation links, updated for light background
+  const baseLinkClasses = "block px-4 py-2 rounded-lg text-lg font-medium text-text-default transition-all duration-200";
+  const hoverFocusLinkClasses = "hover:bg-primary-50 hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:ring-offset-2";
 
   return (
-    <header className="fixed top-0 left-0 w-full bg-[var(--color-primary-700)] text-white py-[var(--spacing-4)] shadow-xl z-50">
-      <nav className="container mx-auto flex flex-wrap justify-between items-center px-[var(--spacing-4)]" aria-label="Main navigation">
+    <header className="fixed top-0 left-0 w-full bg-white/80 backdrop-blur-md border-b border-border-default/50 py-3 shadow-sm z-50">
+      <nav className="container mx-auto flex flex-wrap justify-between items-center px-6" aria-label="Main navigation">
         <Link 
           href="/" 
-          className={`text-[var(--font-size-3xl)] sm:text-[var(--font-size-4xl)] font-[var(--font-weight-extrabold)] tracking-wide mb-[var(--spacing-4)] sm:mb-[var(--spacing-0)] ${hoverFocusLinkClasses} rounded-[var(--radius-sm)]`}
+          className="text-2xl sm:text-3xl font-extrabold tracking-tight text-primary-600 hover:opacity-80 transition-opacity rounded-lg"
           aria-label="Nexus App Home"
+          onClick={() => isMenuOpen && toggleMenu()} // Close mobile menu if navigating home
         >
           Nexus App
         </Link>
 
-        {/* Mobile menu button */}
+        {/* Mobile menu button - visible only on small screens */}
         <button
-          className={`sm:hidden text-white text-[var(--font-size-2xl)] p-[var(--spacing-2)] rounded-[var(--radius-sm)] ${hoverFocusLinkClasses}`}
+          className="sm:hidden text-text-default p-2 rounded-lg hover:bg-gray-100 transition-colors"
           onClick={toggleMenu}
-          aria-controls="main-navigation-menu"
+          aria-controls="main-navigation-menu-mobile"
           aria-expanded={isMenuOpen}
           aria-label="Toggle navigation menu"
         >
           {isMenuOpen ? '✕' : '☰'}
         </button>
 
-        {/* Desktop navigation */}
-        <ul className="hidden sm:flex flex-wrap justify-end gap-x-[var(--spacing-6)] gap-y-[var(--spacing-2)]" id="main-navigation-menu">
-          <li><Link href="/" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`}>Home</Link></li>
-          <li><Link href="/country-flags" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`}>Country Flags</Link></li>
-          <li><Link href="/upload" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`}>Upload</Link></li>
-          <li><Link href="/view-attachments" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`}>View Attachments</Link></li>
-          <li><Link href="/google-search" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`}>Google Search</Link></li>
-          <li><Link href="/login" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`}>Login</Link></li>
-        </ul>
-
-        {/* Mobile navigation (visible when menu is open) */}
-        {isMenuOpen && (
-          <ul className="basis-full flex flex-col items-center mt-[var(--spacing-4)] space-y-[var(--spacing-3)] sm:hidden" id="main-navigation-menu-mobile">
-            <li><Link href="/" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu}>Home</Link></li>
-            <li><Link href="/country-flags" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu}>Country Flags</Link></li>
-            <li><Link href="/upload" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu}>Upload</Link></li>
-            <li><Link href="/view-attachments" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu}>View Attachments</Link></li>
-            <li><Link href="/google-search" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu}>Google Search</Link></li>
-            <li><Link href="/login" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu}>Login</Link></li>
+        {/* Desktop navigation and Google Translate - visible on sm and up */}
+        <div className="hidden sm:flex flex-wrap items-center gap-x-8"> {/* This div wraps the desktop nav and translate */}
+          <ul className="flex flex-wrap justify-end gap-x-2" id="main-navigation-menu-desktop" role="menubar">
+            <li role="none"><Link href="/" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} role="menuitem">Home</Link></li>
+            <li role="none"><Link href="/country-flags" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} role="menuitem">Country Flags</Link></li>
+            <li role="none"><Link href="/upload" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} role="menuitem">Upload</Link></li>
+            <li role="none"><Link href="/view-attachments" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} role="menuitem">View Attachments</Link></li>
+            <li role="none"><Link href="/google-search" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} role="menuitem">Google Search</Link></li>
+            <li role="none"><Link href="/tic-tac-toe" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} role="menuitem">Tic-Tac-Toe</Link></li>
+            <li role="none"><Link href="/login" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} role="menuitem">Login</Link></li>
           </ul>
-        )}
+          {/* Google Translate for Desktop */}
+          <div id="google_translate_element_desktop" className="google-translate-widget"></div>
+        </div>
+
+        {/* Mobile navigation (collapsible, visible when menu is open) */}
+        <div
+          id="main-navigation-menu-mobile"
+          className={`basis-full transition-all duration-300 ease-in-out overflow-hidden sm:hidden ${
+            isMenuOpen ? 'max-h-screen opacity-100 pt-6 pb-4' : 'max-h-0 opacity-0'
+          }`}
+          aria-hidden={!isMenuOpen}
+        >
+          <ul className="flex flex-col space-y-2" role="menubar">
+            {/* Google Translate for Mobile */}
+            <li className="w-full text-center py-2" role="none">
+              <div id="google_translate_element_mobile" className="google-translate-widget inline-block"></div>
+            </li>
+            <li role="none"><Link href="/" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu} role="menuitem">Home</Link></li>
+            <li role="none"><Link href="/country-flags" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu} role="menuitem">Country Flags</Link></li>
+            <li role="none"><Link href="/upload" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu} role="menuitem">Upload</Link></li>
+            <li role="none"><Link href="/view-attachments" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu} role="menuitem">View Attachments</Link></li>
+            <li role="none"><Link href="/google-search" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu} role="menuitem">Google Search</Link></li>
+            <li role="none"><Link href="/tic-tac-toe" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu} role="menuitem">Tic-Tac-Toe</Link></li>
+            <li role="none"><Link href="/login" className={`${baseLinkClasses} ${hoverFocusLinkClasses}`} onClick={toggleMenu} role="menuitem">Login</Link></li>
+          </ul>
+        </div>
       </nav>
     </header>
   );

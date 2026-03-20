@@ -37,17 +37,17 @@ export default function ViewAttachmentsPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-8 bg-gray-50">
-        <p className="text-lg text-gray-700">Loading attachments...</p>
+      <main className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-8 bg-background-default">
+        <p className="text-lg text-text-default">Loading attachments...</p>
       </main>
     );
   }
 
   if (error) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-8 bg-gray-50">
-        <p className="text-red-500 text-lg mb-4">{error}</p>
-        <Link href="/" className="text-blue-600 hover:underline text-lg transition-colors duration-200">
+      <main className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-8 bg-background-default">
+        <p className="text-error-600 text-lg mb-4">{error}</p>
+        <Link href="/" className="text-primary-600 hover:underline text-lg transition-colors duration-200">
           Back to Home
         </Link>
       </main>
@@ -55,12 +55,12 @@ export default function ViewAttachmentsPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center py-12 px-4 sm:px-8 bg-gray-50">
-      <div className="w-full max-w-4xl bg-white p-8 sm:p-10 rounded-xl shadow-2xl">
-        <h1 className="text-4xl font-extrabold mb-10 text-gray-900 text-center tracking-tight">View Attachments</h1>
+    <main className="flex min-h-screen flex-col items-center py-12 px-4 sm:px-8 bg-background-default">
+      <div className="w-full max-w-4xl bg-background-card p-8 sm:p-10 rounded-xl shadow-2xl border border-border-default">
+        <h1 className="text-4xl font-extrabold mb-10 text-text-default text-center tracking-tight">View Attachments</h1>
 
         {attachments.length === 0 ? (
-          <div className="text-center text-lg text-gray-600 p-8 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="text-center text-lg text-text-muted p-8 bg-background-light rounded-lg border border-border-default">
             <p className="mb-2">No attachments uploaded yet.</p>
             <p>Use the "Upload New File" button below to add some.</p>
           </div>
@@ -69,15 +69,15 @@ export default function ViewAttachmentsPage() {
             {attachments.map((attachment) => (
               <div
                 key={attachment.name}
-                className="bg-gray-50 p-5 rounded-lg flex flex-col items-center gap-4 hover:bg-gray-100 transition-colors duration-200 shadow-sm border border-gray-100"
+                className="bg-background-light p-5 rounded-lg flex flex-col items-center gap-4 hover:bg-background-default transition-colors duration-200 shadow-sm border border-border-default"
               >
                 {/* Simple file icon using text for now */}
-                <span className="text-3xl text-gray-500">📁</span>
+                <span className="text-3xl text-text-muted">📁</span>
                 <a
                   href={attachment.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-blue-600 hover:text-blue-800 break-all text-base text-center transition-colors duration-200"
+                  className="font-medium text-primary-600 hover:text-primary-800 break-all text-base text-center transition-colors duration-200"
                 >
                   {attachment.name}
                 </a>
@@ -86,11 +86,11 @@ export default function ViewAttachmentsPage() {
           </div>
         )}
 
-        <div className="mt-12 pt-8 border-t border-gray-200 flex flex-col sm:flex-row justify-center gap-4">
-          <Link href="/upload" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-7 rounded-lg shadow-md transition-colors duration-200 text-center">
+        <div className="mt-12 pt-8 border-t border-border-default flex flex-col sm:flex-row justify-center gap-4">
+          <Link href="/upload" className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 px-7 rounded-lg shadow-md transition-colors duration-200 text-center">
             Upload New File
           </Link>
-          <Link href="/" className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3.5 px-7 rounded-lg shadow-md transition-colors duration-200 text-center">
+          <Link href="/" className="bg-text-muted hover:bg-text-default text-white font-bold py-3.5 px-7 rounded-lg shadow-md transition-colors duration-200 text-center">
             Back to Home
           </Link>
         </div>

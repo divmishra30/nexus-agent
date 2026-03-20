@@ -1,0 +1,1 @@
+import { Metadata } from 'next';import React from 'react';export const metadata: Metadata = {  title: 'Tic-Tac-Toe Game',};export default function TicTacToeLayout({ children }: { children: React.ReactNode }) {  return <>{children}</>;}
