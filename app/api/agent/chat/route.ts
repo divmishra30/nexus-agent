@@ -4,6 +4,7 @@ import * as fs from "fs";
 import { getRelevantFiles } from "@/agent/rag";
 import { askGemini } from "@/agent/gemini";
 import { logger } from "@/agent/logger";
+import { validateCode } from "@/agent/validator";
 
 // Project root — two levels up from app/api/agent/chat/
 const PROJECT_ROOT = path.resolve(process.cwd());
@@ -11,8 +12,8 @@ const PROJECT_ROOT = path.resolve(process.cwd());
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message } = body;
-    logger.log("📨 Agent Chat Request:", { message });
+    const { message, attachments, history } = body;
+    logger.log("📨 Agent Chat Request:", { message, attachmentsCount: attachments?.length || 0, historyLength: history?.length || 0 });
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Multi-pass: Analyze intent first (Pure Prompt Refinement)
     const { analyzeIntent } = require("@/agent/gemini");
-    const analysis = await analyzeIntent(message);
+    const analysis = await analyzeIntent(message, history || [], attachments || []);
 
     if (analysis.isAmbiguous) {
       logger.log("⚠️ Intent analysis flagged as AMBIGUOUS, but proceeding with best-guess refinement.");
@@ -58,11 +59,13 @@ export async function POST(request: NextRequest) {
 
     // 5. Ask Gemini for edits using REFINED prompt
     logger.log("🤖 Querying Gemini for edits with refined prompt...");
-    const response = await askGemini(projectStructure, fileContext, analysis.refinedPrompt);
+    const response = await askGemini(projectStructure, fileContext, analysis.refinedPrompt, attachments, history || []);
     logger.log(`✨ Gemini Response received. Reply length: ${response.reply.length}, Edits: ${response.edits.length}`);
 
     // 4. Apply file edits if any
     const filesChanged: string[] = [];
+    const validationErrors: string[] = [];
+
     if (response.edits.length > 0) {
       logger.log(`🛠 Applying ${response.edits.length} file edits...`);
       
@@ -87,6 +90,16 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // create or modify
+          
+          // --- VALIDATION STEP ---
+          const validation = validateCode(edit.filePath, edit.content);
+          if (!validation.isValid) {
+            logger.error(`🚫 Skipping invalid edit for ${edit.filePath}: ${validation.error}`);
+            validationErrors.push(validation.error || `Invalid syntax in ${edit.filePath}`);
+            continue; // Skip this file to prevent crash
+          }
+          // -----------------------
+
           const dir = path.dirname(targetPath);
           if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
@@ -103,9 +116,17 @@ export async function POST(request: NextRequest) {
       indexProject(PROJECT_ROOT);
     }
 
+    let finalReply = response.reply;
+    if (validationErrors.length > 0) {
+      finalReply += "\n\n⚠️ **Warning: Some changes were skipped to prevent a crash due to syntax errors:**\n" + 
+                    validationErrors.map(e => `- ${e}`).join("\n") +
+                    "\n\nPlease try asking me to fix these files specifically.";
+    }
+
     return NextResponse.json({
-      reply: response.reply,
+      reply: finalReply,
       filesChanged,
+      validationErrors: validationErrors.length > 0 ? validationErrors : undefined
     });
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : String(err);

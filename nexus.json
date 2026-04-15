@@ -1,0 +1,25 @@
+{
+  "project": {
+    "name": "Nexus Agent",
+    "type": "Next.js",
+    "structure": {
+      "components": "components/",
+      "pages": "app/",
+      "styles": "app/globals.css",
+      "agent": "agent/"
+    },
+    "design": {
+      "framework": "Tailwind CSS",
+      "theme": {
+        "primary": "hsl(var(--primary))",
+        "background": "hsl(var(--background))",
+        "radius": "0.5rem"
+      },
+      "preferences": [
+        "Glassmorphism",
+        "Dark Mode",
+        "Smooth Transitions"
+      ]
+    }
+  }
+}

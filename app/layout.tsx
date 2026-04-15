@@ -1,6 +1,7 @@
 import './globals.css';
 import Script from 'next/script';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export const metadata = {
   title: 'nexus app',
@@ -13,15 +14,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className="scroll-smooth">
+      <body className="flex flex-col min-h-screen bg-[var(--color-background-default)] text-slate-900 antialiased">
         <Header />
-        {/* Main content wrapper to prevent horizontal overflow and center content on large screens */}
-        <div className="pt-20 mx-auto max-w-screen-2xl">
+        
+        {/* 
+          Main content wrapper: 
+          - pt-20 to account for fixed header height
+          - flex-grow to push footer to the bottom of the viewport
+          - overflow-x-hidden to prevent horizontal scrollbars from entrance animations
+        */}
+        <div className="flex-grow pt-20 overflow-x-hidden">
           {children}
         </div>
 
-        {/* Agent Widget Script (as suggested by its comment) */}
+        <Footer />
+
+        {/* Agent Widget Script */}
         <Script src="/agent-widget.js" strategy="afterInteractive" />
       </body>
     </html>

@@ -1,29 +1,33 @@
 {
-  "name": "nexus-agent",
+  "name": "nexus-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "glob": "^13.0.6",
+    "@tailwindcss/node": "^4.2.2",
+    "@types/uuid": "^10.0.0",
+    "framer-motion": "^11.18.2",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "simple-git": "^3.33.0"
+    "simple-git": "^3.33.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4",
+    "postcss": "^8",
+    "tailwindcss": "^4.2.2",
     "typescript": "^5"
   }
 }

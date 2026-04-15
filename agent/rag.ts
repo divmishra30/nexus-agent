@@ -4,7 +4,7 @@ import { logger } from "./logger";
 
 // Directories/files to always skip
 const IGNORE_DIRS = new Set([
-  "node_modules", ".next", ".git", ".vercel", "dist", "build", ".turbo",
+  "node_modules", ".next", ".git", ".vercel", "dist", "build", ".turbo", "agent"
 ]);
 const IGNORE_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2",
@@ -19,9 +19,36 @@ interface FileEntry {
   tokens: string[]; // lowercased word tokens for matching
 }
 
+interface NexusConfig {
+  project?: {
+    structure?: Record<string, string>;
+    design?: {
+      styles?: string;
+      preferences?: string[];
+    };
+  };
+}
+
 let fileIndex: FileEntry[] = [];
 let lastIndexTime = 0;
+let cachedConfig: NexusConfig | null = null;
 const INDEX_TTL = 30_000; // re-index every 30 seconds max
+
+/**
+ * Loads the nexus.json configuration if it exists.
+ */
+function loadNexusConfig(rootDir: string): NexusConfig | null {
+  const configPath = path.join(rootDir, "nexus.json");
+  if (fs.existsSync(configPath)) {
+    try {
+      const content = fs.readFileSync(configPath, "utf-8");
+      return JSON.parse(content);
+    } catch (e) {
+      logger.error("Failed to parse nexus.json", e);
+    }
+  }
+  return null;
+}
 
 /**
  * Recursively scan the project directory and build an in-memory index.
@@ -89,11 +116,12 @@ export function getRelevantFiles(
   // Re-index if stale
   if (Date.now() - lastIndexTime > INDEX_TTL || fileIndex.length === 0) {
     indexProject(rootDir);
+    cachedConfig = loadNexusConfig(rootDir);
   }
 
   const queryTokens = new Set(tokenize(query));
   const queryLower = query.toLowerCase();
-  const isUITask = queryLower.includes("ui") || queryLower.includes("style") || queryLower.includes("css") || queryLower.includes("theme") || queryLower.includes("layout") || queryLower.includes("format");
+  const isUITask = queryLower.includes("ui") || queryLower.includes("style") || queryLower.includes("css") || queryLower.includes("theme") || queryLower.includes("layout") || queryLower.includes("format") || queryLower.includes("look") || queryLower.includes("premium");
 
   if (queryTokens.size === 0) {
     return fileIndex.slice(0, topK).map((f) => ({
@@ -102,7 +130,8 @@ export function getRelevantFiles(
     }));
   }
 
-  const scored = fileIndex.map((file) => {
+  // First pass: Calculate base scores
+  const baseScored = fileIndex.map((file) => {
     let score = 0;
     const pathLower = file.relativePath.toLowerCase();
     
@@ -114,26 +143,60 @@ export function getRelevantFiles(
     }
 
     // Infrastructural Boosting
-    // Core files that define the theme/layout should almost always be visible in UI tasks
-    const isCoreInfra = 
-      pathLower.endsWith("globals.css") || 
-      pathLower.includes("tailwind.config") || 
-      pathLower.includes("package.json") ||
-      pathLower.includes("layout.tsx") ||
-      pathLower.includes("layout.jsx") ||
-      pathLower.includes("theme.ts") ||
-      pathLower.includes("header") || 
-      pathLower.includes("navbar");
+    // Build a list of core files from both defaults and nexus.json
+    const coreFiles = new Set([
+      "globals.css", "tailwind.config", "package.json", "layout.tsx", "layout.jsx", "theme.ts", "next.config"
+    ]);
+
+    if (cachedConfig?.project?.structure) {
+      Object.values(cachedConfig.project.structure).forEach(p => coreFiles.add(p.toLowerCase()));
+    }
+
+    const isCoreInfra = Array.from(coreFiles).some(cf => pathLower.includes(cf));
 
     if (isCoreInfra && isUITask) {
-      score += 10; // Massive boost for foundational files in UI tasks
+      score += 8; 
+    }
+
+    // Design preference boosting
+    if (cachedConfig?.project?.design?.preferences && isUITask) {
+      for (const pref of cachedConfig.project.design.preferences) {
+        if (queryLower.includes(pref.toLowerCase())) score += 3;
+      }
     }
 
     return { ...file, score };
   });
 
-  scored.sort((a, b) => b.score - a.score);
-  const results = scored.slice(0, topK);
+  // Second pass: Structural & Linked Boosting
+  // If a file has a high score, boost its neighbors and sibling files (e.g. Header.tsx -> Header.css)
+  const finalScored = baseScored.map((file) => {
+    let extraScore = 0;
+    const currentDir = path.dirname(file.relativePath);
+    const currentBase = path.basename(file.relativePath, path.extname(file.relativePath));
+
+    for (const other of baseScored) {
+      if (other.score > 10 && other.relativePath !== file.relativePath) {
+        const otherDir = path.dirname(other.relativePath);
+        const otherBase = path.basename(other.relativePath, path.extname(other.relativePath));
+
+        // Boosting siblings (same base name, different extension)
+        if (currentBase === otherBase && currentDir === otherDir) {
+          extraScore += other.score * 0.5;
+        }
+
+        // Boosting neighbors (same directory)
+        if (currentDir === otherDir) {
+          extraScore += 2;
+        }
+      }
+    }
+
+    return { ...file, score: file.score + extraScore };
+  });
+
+  finalScored.sort((a, b) => b.score - a.score);
+  const results = finalScored.slice(0, topK);
   
   if (results.length > 0 && results[0].score > 0) {
     logger.log(`🎯 Top RAG match: ${results[0].relativePath} (score: ${results[0].score})`);
