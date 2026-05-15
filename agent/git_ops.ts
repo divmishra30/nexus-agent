@@ -28,3 +28,19 @@ export async function getStatus(repoDir: string) {
   };
 }
 
+/**
+ * Hard reset to the last commit to discard all uncommitted local changes.
+ */
+export async function gitResetHard(repoDir: string) {
+  logger.log("⏪ Executing Git Hard Reset...");
+  const git = getGit(repoDir);
+  try {
+    await git.reset(["--hard"]);
+    await git.clean("f", ["-d"]); // Remove untracked files
+    logger.log("✅ Git Hard Reset successful.");
+    return true;
+  } catch (err) {
+    logger.error("❌ Git Hard Reset failed:", err);
+    throw err;
+  }
+}

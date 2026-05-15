@@ -164,14 +164,14 @@ const steps = [
 ];
 
 const clientLogos = [
-  { id: '1', name: 'InnovateCorp', imgSrc: '', link: '#' },
-  { id: '2', name: 'Global Solutions', imgSrc: '', link: '#' },
-  { id: '3', name: 'FutureTech', imgSrc: '', link: '#' },
-  { id: '4', name: 'NextGen AI', imgSrc: '', link: '#' },
-  { id: '5', name: 'Creative Studio', imgSrc: '', link: '#' },
-  { id: '6', name: 'Data Insights', imgSrc: '', link: '#' },
-  { id: '7', name: 'Quantum Minds', imgSrc: '', link: '#' },
-  { id: '8', name: 'Cloud Architects', imgSrc: '', link: '#' },
+  { id: '1', name: 'InnovateCorp', imgSrc: null, link: '#' },
+  { id: '2', name: 'Global Solutions', imgSrc: null, link: '#' },
+  { id: '3', name: 'FutureTech', imgSrc: null, link: '#' },
+  { id: '4', name: 'NextGen AI', imgSrc: null, link: '#' },
+  { id: '5', name: 'Creative Studio', imgSrc: null, link: '#' },
+  { id: '6', name: 'Data Insights', imgSrc: null, link: '#' },
+  { id: '7', name: 'Quantum Minds', imgSrc: null, link: '#' },
+  { id: '8', name: 'Cloud Architects', imgSrc: null, link: '#' },
 ];
 
 const btnPrimaryClasses = "bg-[var(--color-primary-600)] text-white font-[var(--font-weight-semibold)] py-3 px-6 rounded-[var(--radius-lg)] shadow-md transition-all duration-300 ease-in-out hover:bg-[var(--color-primary-700)] hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-[var(--color-primary-300)] active:scale-95 text-center";
