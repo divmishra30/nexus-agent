@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 // Define navigation links
 const NAV_LINKS = [
@@ -20,7 +19,7 @@ const NAV_LINKS = [
 /**
  * Nexus Agent Header Component
  * Features:
- * - High-fidelity full-height hover interactions
+ * - High-fidelity full-height interactions
  * - Shared layout background motion
  * - Defined border highlight design
  * - Responsive navigation with Google Translate
@@ -28,7 +27,6 @@ const NAV_LINKS = [
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -102,35 +100,15 @@ export default function Header() {
             className="flex items-stretch" 
             id="main-navigation-menu-desktop" 
             role="menubar"
-            onMouseLeave={() => setHoveredIndex(null)}
           >
-            {NAV_LINKS.map((link, index) => (
+            {NAV_LINKS.map((link) => (
               <li role="none" key={link.name} className="relative h-full flex">
                 <Link 
                   href={link.href} 
                   className={navLinkClasses} 
                   role="menuitem"
-                  onMouseEnter={() => setHoveredIndex(index)}
                 >
                   <span className="relative z-10">{link.name}</span>
-                  
-                  <AnimatePresence>
-                    {hoveredIndex === index && (
-                      <motion.div
-                        layoutId="nav-hover-pill"
-                        className="absolute inset-0 bg-blue-600/10 border-b-2 border-blue-500 z-0"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ 
-                          type: "spring", 
-                          stiffness: 400, 
-                          damping: 30, 
-                          mass: 1 
-                        }}
-                      />
-                    )}
-                  </AnimatePresence>
                 </Link>
               </li>
             ))} 

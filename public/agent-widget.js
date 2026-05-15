@@ -342,10 +342,20 @@
       color: #fff;
       border-radius: 12px;
       width: 40px; height: 40px;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       box-shadow: 0 4px 10px var(--na-accent-glow);
     }
     .na-send-btn:hover { transform: scale(1.05); color: #fff; }
     .na-send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    
+    .na-send-btn.stop {
+      background: #1e293b;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .na-send-btn.stop:hover {
+      background: var(--na-error);
+      transform: scale(1.1);
+    }
 
     .na-attachment-preview {
       display: flex;
@@ -461,6 +471,8 @@
   let selectedContext = null;
   let pendingFiles = [];
   let chatHistory = [];
+  let isThinking = false;
+  let abortController = null;
 
   // --- UI Helpers ---
 
@@ -486,12 +498,47 @@
   function removeThinking() {
     const indicator = document.getElementById("na-thinking-indicator");
     if (indicator) indicator.remove();
+    isThinking = false;
+    toggleSendButton(false);
+  }
+
+  function toggleSendButton(thinking) {
+    if (thinking) {
+      sendBtn.classList.add("stop");
+      sendBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`;
+      sendBtn.title = "Stop Execution";
+    } else {
+      sendBtn.classList.remove("stop");
+      sendBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>`;
+      sendBtn.title = "Send Message";
+    }
   }
 
   // --- Auto-expanding Textarea ---
   input.addEventListener("input", function() {
     this.style.height = "auto";
     this.style.height = (this.scrollHeight) + "px";
+  });
+
+  input.addEventListener("paste", function(e) {
+    // 1. Handle Image Pasting
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    let hasImage = false;
+    for (let index in items) {
+      const item = items[index];
+      if (item.kind === 'file' && item.type.indexOf("image") !== -1) {
+        const blob = item.getAsFile();
+        pendingFiles.push(blob);
+        hasImage = true;
+      }
+    }
+    if (hasImage) renderAttachments();
+
+    // 2. Ensure auto-expansion after paste
+    setTimeout(() => {
+      this.style.height = "auto";
+      this.style.height = (this.scrollHeight) + "px";
+    }, 10);
   });
 
   // --- Selection Mode Logic ---
@@ -607,19 +654,30 @@
   // --- Main Messaging ---
 
   async function sendMessage() {
+    // STOP check MUST come first — clicking Stop has empty input, and the empty guard
+    // would otherwise cause an early return before the abort could fire.
+    if (isThinking) {
+      if (abortController) abortController.abort();
+      return;
+    }
+
     const text = input.value.trim();
     if (!text && !selectedContext && pendingFiles.length === 0) return;
 
-    const fullMessage = selectedContext 
-      ? `[Target Element Context: ${selectedContext.selector}] ${text}`
-      : text;
-
-    appendMessage("user", text || "Analyzing the specified element...");
+    const currentSelector = selectedContext ? selectedContext.selector : null;
+    const displayMessage = text || (currentSelector ? `Analyzing ${selectedContext.tag}...` : "");
+    
+    if (displayMessage) appendMessage("user", displayMessage);
     const thinking = appendMessage("agent", "", true);
+
+    // Update state
+    isThinking = true;
+    abortController = new AbortController();
+    toggleSendButton(true);
 
     // Disable input while thinking
     input.disabled = true;
-    sendBtn.disabled = true;
+    sendBtn.disabled = false; // Keep enabled for "Stop"
 
     // Prepare attachments
     const attachmentSpecs = await Promise.all(pendingFiles.map(async (file) => ({
@@ -631,6 +689,7 @@
     // Reset UI state
     input.value = "";
     input.style.height = "auto";
+    const lastSelector = currentSelector; // Keep local copy for history tracking if needed
     selectedContext = null;
     pendingFiles = [];
     renderChip();
@@ -640,10 +699,13 @@
       const response = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: abortController.signal,
         body: JSON.stringify({
-          message: fullMessage,
+          message: text || `Analyze the element: ${lastSelector}`,
+          currentSelector: lastSelector,
           history: chatHistory,
-          attachments: attachmentSpecs
+          attachments: attachmentSpecs,
+          currentUrl: window.location.pathname
         }),
       });
 
@@ -665,13 +727,17 @@
         }
         
         // Persist History
-        chatHistory.push({ role: "user", text: fullMessage });
+        chatHistory.push({ role: "user", text: text || (lastSelector ? `Analyze ${lastSelector}` : "Review request") });
         chatHistory.push({ role: "model", text: result.reply });
         if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
       }
     } catch (err) {
       removeThinking();
-      appendMessage("agent", "❌ Connection failed. Ensure the dev server is running.").style.color = "var(--na-error)";
+      if (err.name === 'AbortError') {
+        appendMessage("agent", "🛑 Execution terminated by user.").style.color = "var(--na-text-muted)";
+      } else {
+        appendMessage("agent", "❌ Connection failed. Ensure the dev server is running.").style.color = "var(--na-error)";
+      }
     } finally {
       input.disabled = false;
       sendBtn.disabled = false;
@@ -684,7 +750,10 @@
   btn.onclick = () => {
     isOpen = !isOpen;
     panel.style.display = isOpen ? "flex" : "none";
-    setTimeout(() => panel.classList.toggle("visible", isOpen), 10);
+    setTimeout(() => {
+      panel.classList.toggle("visible", isOpen);
+      if (isOpen) input.focus();
+    }, 10);
     btn.innerHTML = isOpen ? `✕` : `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9-9 9-9-1.8-9-9 1.8-9 9-9z"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>`;
   };
 

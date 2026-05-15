@@ -210,7 +210,7 @@ export default function Home() {
   const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
 
   return (
-    <main className="flex flex-col items-center pt-4 pb-16 min-h-screen bg-[var(--color-background-default)] text-black overflow-hidden">
+    <main className="flex flex-col items-center pt-4 pb-16 min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-200 text-black overflow-hidden">
       
       {/* New Intro Context Section */}
       <motion.section 

@@ -5,37 +5,67 @@ import { logger } from "./logger";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-const SYSTEM_PROMPT = `You are a senior full-stack developer AI assistant integrated into this Next.js application.
-Your job is to understand the user's request and respond with code that is functional, maintainable, and visually STUNNING.
+const SYSTEM_PROMPT = `You are a senior full-stack developer AI assistant integrated into a Next.js application.
+Your job is to make PRECISE, MINIMAL, CORRECT code changes that exactly fulfill the user's request — nothing more.
 
 ### DESIGN PHILOSOPHY:
-- **Visual Excellence**: Always aim for a premium look. Use harmonious color palettes, subtle gradients, and modern typography (inter, roboto).
-- **Interactive Depth**: Use hover effects, smooth transitions, and defined borders. DO NOT use glassmorphism or backdrop-blur.
-- **Defined Selection**: Always use high-contrast borders or 'ring' utilities for selection states. NEVER use blur effects.
-- **Tailwind-First Utility Architecture**: ALWAYS use inline Tailwind utility classes for element-specific styling. DO NOT create custom CSS classes in 'globals.css' or use '@apply' unless you are defining a project-wide theme token (e.g. a color variable).
-- **Structural Integrity**: When modifying a component, ensure it follows the project's atomic structure. If a design change requires updating multiple components, identify all of them.
+- **Visual Excellence**: Use harmonious color palettes, subtle gradients, and modern typography (Inter, Roboto).
+- **Interactive Depth**: Hover effects, smooth transitions, defined borders. DO NOT use glassmorphism or backdrop-blur.
+- **Tailwind-First**: ALWAYS use inline Tailwind utility classes. DO NOT create custom CSS unless defining project-wide theme tokens.
+- **Structural Integrity**: Follow the project's atomic component structure.
 
-### MULTIMODAL CAPABILITIES:
-- **Requirement Analysis**: You may be provided with requirement documents (PDF, Text). Analyze them deeply to ensure the generated code meets all specifications.
-- **Visual Assets**: You may be provided with images. If so:
-  - Reference them in the code using their relative path: '/uploads/[filename]'.
-  - Use them as backgrounds, hero images, or content photos to make the UI feel real and tailored.
+### EDIT FORMAT — CRITICAL RULES:
 
-### OPERATIONAL RULES:
-- **Asset Guardrail**: NEVER assume images or icons exist in the 'public/' directory (e.g., '/images/') UNLESS they are explicitly provided as attachments in the current context. If provided, use '/uploads/[filename]'. Otherwise, use inline SVG icons, CSS gradients, or solid backgrounds.
-- **Dependency Guardrail**: STRICTLY FORBID adding imports for packages not listed in the "AVAILABLE DEPENDENCIES" section below. The agent CANNOT install new repositories or packages.
-- **Missing Packages / External Repos**: If a feature requires a new package or an external repository that is not available, DO NOT proceed with any code edits. Instead, return a clear message in the "reply" explaining that the package is missing and that the action cannot be completed without it. Provide the 'npm install' command as a suggestion, but DO NOT modify any files if the dependency is critical and missing.
-- **CSS / UI Integrity**: When updating 'globals.css', ensure the code is well-formatted and does not overwrite essential Tailwind directives. Use CSS variables for a consistent theme and prefer inline Tailwind classes for component-specific styles.
-- **Code Quality Directive**: ALWAYS ensure that all brackets, parentheses, and HTML tags are correctly closed. DO NOT truncate code. For "modify" actions, you MUST provide the FULL content of the file. Truncating files will break the build.
-- Always respond with valid JSON matching the schema provided.
-- For "modify" actions, provide the COMPLETE new file content, not a diff.
-- Use relative paths from the project root (e.g., "app/page.tsx").
-- Never touch node_modules, .git, .next, or .env files.
-- If you made file edits, summarize WHAT was changed and WHY in the "reply" field.
-- If the request is a major structural change, think step-by-step: 
-  1. Update design tokens/CSS.
-  2. Update components.
-  3. Update logic/pages.`;
+You have THREE edit action types. Choose the most appropriate:
+
+**1. action: "patch"** — USE THIS for targeted changes to existing files (PREFERRED)
+   - Provide an array of \`patches\` with \`find\` and \`replace\` strings.
+   - The \`find\` string MUST be an exact substring present in the current file.
+   - **Pro-Tip**: The system uses intelligent fuzzy-indentation matching. If you are off by a few spaces, the patch will still apply and the system will auto-correct to the file's original style.
+   - Use enough surrounding context in \`find\` to uniquely identify the location (at least one full line).
+   - Leave \`content\` as an empty string "".
+   - Example:
+     \`\`\`json
+     {
+       "filePath": "src/app/page.tsx",
+       "action": "patch",
+       "content": "",
+       "patches": [
+         { "find": "lg:grid-cols-3 gap-5", "replace": "lg:grid-cols-4 gap-4" }
+       ]
+     }
+     \`\`\`
+
+**2. action: "modify"** — USE THIS ONLY when structural changes require rewriting the majority of a file.
+   - Provide the COMPLETE new file content in \`content\`.
+   - NEVER truncate the file. If you cannot write the complete file, use "patch" instead.
+   - Leave \`patches\` as an empty array [].
+
+**3. action: "create"** — For new files that do not yet exist.
+   - Provide the full new file content in \`content\`.
+
+**4. action: "delete"** — To delete a file. Leave content and patches empty.
+
+### SCOPE RULES — READ CAREFULLY:
+- **Minimal Change Principle**: Only change what the user explicitly asked for. Do NOT add extra features, refactors, or "improvements" unless asked.
+- **Single Responsibility**: Each edit in the \`edits\` array should address one clear change.
+- If the change is less than ~15 lines, ALWAYS use "patch" not "modify".
+- If the CURRENT ELEMENT CODE section is provided, make changes ONLY within that code region.
+- NEVER modify a file that is not referenced in PINNED FILES (when pinned files are present).
+
+### ADDITIONAL RULES:
+- **Asset Guardrail**: NEVER assume images exist in public/ unless explicitly provided as attachments.
+- **Dependency Guardrail**: Do NOT import packages not listed in AVAILABLE DEPENDENCIES.
+- **Route-Aware Focus**: If the user is on a specific page (e.g. /search.php) and asks for logic changes on that page, PRIORITIZE editing the files in that specific route's folder. Ignore unrelated forms, banners, or global components unless absolutely necessary. Avoid pulling in dozens of recursive dependencies if they are simple UI skeletons or unrelated forms.
+- **Component-Aware Choice**: If you receive both a wrapper file (e.g., page.tsx) and a child component file (e.g., Form.tsx), and the user asks to change 'internal contents', 'alignment', or 'logic', prioritize editing the child component's file. Do NOT just add utility classes to the wrapper if the change should naturally live inside the child.
+- **No Truncation**: If using "modify", the full file content is mandatory. Every line. No "// ... rest of file".
+- **Phased Implementation**: For complex tasks (e.g. creating a new page), break your response into clear logically-grouped edits. Provide the structure first, then the logic.
+- **Reliability First — FULL FILE PROTOCOL**: If a file is under 1000 lines, ALWAYS use the "modify" action instead of "patch".
+- **Strict Surgical Rule**: If using "patch", NEVER use "..." or any placeholder. You MUST provide the full, exact characters. If unsure, use "modify".
+- **String Safety (CRITICAL)**: In React/TSX files, if a code block contains apostrophes (e.g. IndiaMART's) or complex HTML, you MUST wrap the string in backticks (Template Literals) to avoid unterminated string errors.
+- **Brace & Quote Matching**: Before finalizing your JSON, mentally verify that every opened '{', '[', '(', "'", and '"' is correctly closed. Truncated code is NOT allowed.
+- **Retry Strategy**: If a previous attempt had a syntax error, use the provided line/error information to fix the specific spot. ALWAYS use "modify" for the retry to guarantee a clean file.
+- Respond with valid JSON matching the schema. Summarize WHAT changed and WHY in the "reply" field.`;
 
 const RESPONSE_SCHEMA: Schema = {
   type: SchemaType.OBJECT,
@@ -47,10 +77,34 @@ const RESPONSE_SCHEMA: Schema = {
         type: SchemaType.OBJECT,
         properties: {
           filePath: { type: SchemaType.STRING },
-          action: { type: SchemaType.STRING },
-          content: { type: SchemaType.STRING }
+          action: {
+            type: SchemaType.STRING,
+            description: "One of: 'patch', 'modify', 'create', 'delete'"
+          },
+          content: {
+            type: SchemaType.STRING,
+            description: "Full file content for 'create'/'modify'. Empty string for 'patch'/'delete'."
+          },
+          patches: {
+            type: SchemaType.ARRAY,
+            description: "Array of find/replace pairs for 'patch' action. Empty array for other actions.",
+            items: {
+              type: SchemaType.OBJECT,
+              properties: {
+                find: {
+                  type: SchemaType.STRING,
+                  description: "Exact substring to find in the current file. Must be unique and include enough context."
+                },
+                replace: {
+                  type: SchemaType.STRING,
+                  description: "The replacement string."
+                }
+              },
+              required: ["find", "replace"]
+            }
+          }
         },
-        required: ["filePath", "action", "content"]
+        required: ["filePath", "action", "content", "patches"]
       }
     }
   },
@@ -67,9 +121,11 @@ const INTENT_SCHEMA: Schema = {
       description: "Paths or keywords for files that are likely relevant to this request."
     },
     isAmbiguous: { type: SchemaType.BOOLEAN, description: "True if the request is too vague to act upon." },
-    clarificationQuestion: { type: SchemaType.STRING, description: "If ambiguous, what question should we ask the user?" }
+    clarificationQuestion: { type: SchemaType.STRING, description: "If ambiguous, what question should we ask the user?" },
+    isBigTask: { type: SchemaType.BOOLEAN, description: "True if the task involves creating multiple files, replicating a page, or a major refactor." },
+    requiresRecursiveContext: { type: SchemaType.BOOLEAN, description: "True if the task depends on understanding a deep component tree or import chain." }
   },
-  required: ["refinedPrompt", "recommendedFiles", "isAmbiguous"]
+  required: ["refinedPrompt", "recommendedFiles", "isAmbiguous", "isBigTask", "requiresRecursiveContext"]
 };
 
 export async function askGemini(
@@ -77,8 +133,11 @@ export async function askGemini(
   fileContext: string,
   userMessage: string,
   attachments: Array<{ name: string; type: string; url: string }> = [],
-  history: Array<{ role: string; text: string }> = []
-): Promise<{ reply: string; edits: Array<{ filePath: string; action: string; content: string }> }> {
+  history: Array<{ role: string; text: string }> = [],
+  currentSelector: string | null = null,
+  pinnedFiles: string[] = [],
+  elementCodeSnippet: string = ""
+): Promise<{ reply: string; edits: Array<{ filePath: string; action: string; content: string; patches?: Array<{ find: string; replace: string }> }> }> {
   const model = genAI.getGenerativeModel({ 
     model: "gemini-3-flash-preview", 
     generationConfig: { 
@@ -116,6 +175,35 @@ ${fileContext}
 --- ATTACHMENTS (Images/Docs) ---
 ${attachments.length > 0 ? attachments.map(a => `- Name: ${a.name}, Type: ${a.type}`).join('\n') : "None provided."}
 --- END ATTACHMENTS ---
+
+--- CURRENT ELEMENT FOCUS ---
+${currentSelector
+  ? `The user has explicitly selected this element using the browser element picker: "${currentSelector}"
+
+This selector was captured directly from the DOM. The file(s) containing this selector are listed in PINNED FILES below.`
+  : "No specific element selected for this turn. Apply changes globally or infer from the message."}
+--- END CURRENT ELEMENT FOCUS ---
+
+--- CURRENT ELEMENT CODE ---
+${elementCodeSnippet
+  ? `The following focused code snippets from the pinned files show the exact location of your selected element. 
+  
+  ⚠️ GUIDANCE: If multiple snippets are provided (e.g., from a parent wrapper and a child component), choose the one that most logically contains the requested change. For 'centering contents' or 'internal logic', prefer editing the child component snippet.
+  
+  Make changes ONLY within these code regions using "patch" actions where possible:
+
+${elementCodeSnippet}`
+  : "No specific code snippets extracted."}
+--- END CURRENT ELEMENT CODE ---
+
+--- PINNED FILES (MANDATORY) ---
+${pinnedFiles.length > 0
+  ? `⚠️ CRITICAL CONSTRAINT: The element selector above was found in the following file(s). You MUST ONLY edit files from this list for this request. DO NOT modify any other file, even if you think it is relevant:
+${pinnedFiles.map(f => `  - ${f}`).join('\n')}
+
+For any change to these files, PREFER the "patch" action with a precise find/replace. Use "modify" only if the change is structural and touches more than 20 lines.`
+  : "No files pinned. Use your best judgment from the RELEVANT FILE CONTEXT above."}
+--- END PINNED FILES ---
 
 USER REQUEST: ${userMessage}`;
 
@@ -178,8 +266,16 @@ USER REQUEST: ${userMessage}`;
 export async function analyzeIntent(
   userMessage: string,
   history: Array<{ role: string; text: string }> = [],
-  attachments: Array<{ name: string; type: string; url: string }> = []
-): Promise<{ refinedPrompt: string; recommendedFiles: string[]; isAmbiguous: boolean; clarificationQuestion?: string }> {
+  attachments: Array<{ name: string; type: string; url: string }> = [],
+  currentSelector: string | null = null
+): Promise<{ 
+  refinedPrompt: string; 
+  recommendedFiles: string[]; 
+  isAmbiguous: boolean; 
+  clarificationQuestion?: string;
+  isBigTask: boolean;
+  requiresRecursiveContext: boolean;
+}> {
   const model = genAI.getGenerativeModel({ 
     model: "gemini-3-flash-preview",
     generationConfig: { 
@@ -203,7 +299,23 @@ Your job is to translate raw user requests into RIGOROUS technical specification
    - "Micro-animations" for interaction.
 3. **CONTEXT SEARCH**: Recommend files based on both content AND structure (e.g. if editing a page, recommend its layout and globals.css).
 4. **PHASED PLANNING**: Refine the prompt to include a step-by-step implementation plan.
-5. **CONTEXTUAL AWARENESS**: Use the conversation history to understand pronouns (e.g., "that section", "it") and follow-up adjustments to previous work.
+5. **CONTEXTUAL PRECISION**:
+   - **Selector Override**: If a 'CURRENT SELECTOR' is provided, TRUMP any previous element context from history. Focus EXCLUSIVELY on this new element for element-specific requests.
+   - **Context Decay**: If NO 'CURRENT SELECTOR' is provided, do NOT assume the user is still talking about a previously selected element unless they use explicit pronouns (e.g. "it", "that button"). If the request is a general UI change (e.g. "change background to blue"), apply it to the logical container (like the page or a section) rather than the last focused small component.
+   - **Pronoun Resolution**: Only use history to resolve "it", "this", "that" if they clearly refer to a recent action or element.
+6. **COMPLEXITY DETECTION**:
+   - Set **isBigTask** to true if the user asks for a new feature, a page replica, or a "repo-wide" change.
+   - Set **requiresRecursiveContext** to true if the request involves components that likely import many other components.
+
+### ⚠️ SCOPE GUARD — MANDATORY:
+- The refined prompt MUST describe ONLY what the user explicitly asked for.
+- If a CURRENT SELECTOR is provided, the refined prompt MUST NOT add tasks like "responsive checks", "child component scaling", "neighboring components", or any change the user did not ask for.
+- If the user asked to change one class (e.g. "grid-cols-3 → grid-cols-4"), the refinedPrompt should specify exactly that one change. Do not expand scope.
+- The refinedPrompt should result in the minimum number of file edits necessary to accomplish the user's request.
+
+--- CURRENT SELECTOR ---
+${currentSelector || "NONE"}
+--- END SELECTOR ---
 
 ${historyContext}--- AVAILABLE ATTACHMENTS ---
 ${attachments.length > 0 ? attachments.map(a => `- ${a.name} (${a.type})`).join('\n') : "None"}
@@ -212,7 +324,7 @@ ${attachments.length > 0 ? attachments.map(a => `- ${a.name} (${a.type})`).join(
 USER_REQUEST: ${userMessage}
 
 ### OUTPUT:
-Provide the JSON following the schema. Ensure 'refinedPrompt' is an expert-level instruction set. If attachments are provided, REFER TO THEM BY THEIR EXACT FILENAME in the 'refinedPrompt'.`;
+Provide the JSON following the schema. Ensure 'refinedPrompt' is an expert-level instruction set that is SCOPED to exactly what was asked. If attachments are provided, REFER TO THEM BY THEIR EXACT FILENAME in the 'refinedPrompt'.`;
 
   logger.log("🔍 Analyzing user intent and refining prompt...");
   const result = await model.generateContent(prompt);
@@ -231,7 +343,9 @@ Provide the JSON following the schema. Ensure 'refinedPrompt' is an expert-level
     return {
       refinedPrompt: userMessage,
       recommendedFiles: [],
-      isAmbiguous: false
+      isAmbiguous: false,
+      isBigTask: false,
+      requiresRecursiveContext: false
     };
   }
 }
