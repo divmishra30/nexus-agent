@@ -39,9 +39,8 @@ You have THREE edit action types:
 - **Proactive Improvement**: If you see a way to make the requested change "premium" (e.g. adding a blur effect to a sticky header), do it proactively.
 - **Reliability First**: If a file is under 600 lines, PREFER the "modify" action (full file) to ensure perfect structural integrity and avoid patch failures.
 - **Route-Aware Focus**: Prioritize files in the current route's folder, but don't hesitate to modify global layouts or styles if the task requires it.
-- **No Truncation**: Always provide full file content for "modify" and "create". No "// ... rest of file".
-- **String Safety**: In React/TSX, use backticks (Template Literals) for complex HTML or strings containing apostrophes.
-- **Specialized Skills**: Check the "SPECIALIZED SKILLS" section below for project-specific "how-to" guides and coding patterns. PRIORITIZE these skills over general knowledge.
+- **NO TRUNCATION**: You MUST provide the full file content for "modify" and "create". Never use placeholders like "// ... rest of file". If you truncate or provide empty content, the user's application will break and your changes will be REJECTED.
+- **Empty Content Guard**: If you are using action: "modify", the "content" field MUST NOT BE EMPTY.
 - Respond with valid JSON matching the schema. Summarize everything you changed and WHY in the "reply" field.`;
 
 const RESPONSE_SCHEMA = {
@@ -151,22 +150,30 @@ async function callGateway(messages: any[], responseSchema: any) {
     throw new Error("Gateway returned an empty response.");
   }
 
+  logger.log("📥 Raw LLM Response Content Length:", content.length);
+  // logger.log("📥 Raw LLM Response Content:", content); // Uncomment for deep debugging
+
   try {
     const parsed = extractJson(content);
     
     // Safety check: ensure edits are meaningful
     if (parsed.edits && Array.isArray(parsed.edits)) {
+      const originalCount = parsed.edits.length;
       parsed.edits = parsed.edits.filter((edit: any) => {
-        if ((edit.action === "modify" || edit.action === "create") && !edit.content) {
-          logger.error(`🚫 Rejecting empty content for ${edit.filePath}`);
+        if ((edit.action === "modify" || edit.action === "create") && (!edit.content || edit.content.trim().length === 0)) {
+          logger.error(`🚫 Rejecting empty content for ${edit.filePath}. RAW CONTENT:`, content);
           return false;
         }
         if (edit.action === "patch" && (!edit.patches || edit.patches.length === 0)) {
-          logger.error(`🚫 Rejecting empty patches for ${edit.filePath}`);
+          logger.error(`🚫 Rejecting empty patches for ${edit.filePath}. RAW CONTENT:`, content);
           return false;
         }
         return true;
       });
+      
+      if (originalCount > 0 && parsed.edits.length === 0) {
+        logger.warn("⚠️ All edits were rejected due to empty content/patches.");
+      }
     }
 
     return parsed;

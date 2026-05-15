@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
  * - Semantic HTML5 footer
  * - High contrast product grid
  * - Framer Motion micro-interactions
+ * - All external links have rel="noopener noreferrer" (Link Audit Fix)
  */
 export default function Footer() {
   const scrollToTop = () => {
@@ -18,6 +19,12 @@ export default function Footer() {
 
   const linkStyles = "text-slate-500 hover:text-blue-600 transition-all duration-300 inline-block hover:translate-x-1";
   const headingStyles = "text-slate-900 font-bold mb-6 text-sm uppercase tracking-widest";
+
+  const socialLinks = [
+    { icon: 'G', label: 'GitHub', href: 'https://github.com' },
+    { icon: 'T', label: 'Twitter', href: 'https://twitter.com' },
+    { icon: 'D', label: 'Discord', href: 'https://discord.com' },
+  ];
 
   return (
     <footer className="w-full bg-white border-t-2 border-slate-100 pt-20 pb-12" aria-label="Global Footer">
@@ -36,15 +43,17 @@ export default function Footer() {
               Architecting the future of web development with AI-powered tools and stunning interactive components. Elevate your workflow today.
             </p>
             <div className="flex gap-4">
-              {/* Social Icons Placeholders */}
-              {['github', 'twitter', 'discord'].map((icon) => (
-                <button 
-                  key={icon} 
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors border border-transparent hover:border-blue-200"
-                  aria-label={`Follow us on ${icon}`}
+                  aria-label={`Follow us on ${social.label}`}
                 >
-                  <span className="text-xs uppercase font-bold">{icon[0]}</span>
-                </button>
+                  <span className="text-xs uppercase font-bold">{social.icon}</span>
+                </a>
               ))}
             </div>
           </div>
@@ -67,9 +76,36 @@ export default function Footer() {
             <ul className="flex flex-col gap-3 text-sm">
               <li><Link href="/about" className={linkStyles}>About Agency</Link></li>
               <li><Link href="/contact" className={linkStyles}>Contact Support</Link></li>
-              <li><a href="#" className={linkStyles}>Documentation</a></li>
-              <li><a href="#" className={linkStyles}>API Status</a></li>
-              <li><a href="#" className={linkStyles}>Community</a></li>
+              <li>
+                <a
+                  href="https://nextjs.org/docs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyles}
+                >
+                  Documentation
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://status.vercel.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyles}
+                >
+                  API Status
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyles}
+                >
+                  Community
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -79,7 +115,16 @@ export default function Footer() {
             <ul className="flex flex-col gap-3 text-sm mb-8">
               <li><Link href="/privacy" className={linkStyles}>Privacy Policy</Link></li>
               <li><Link href="/terms" className={linkStyles}>Terms of Service</Link></li>
-              <li><a href="#" className={linkStyles}>Cookie Policy</a></li>
+              <li>
+                <a
+                  href="https://cookiepolicygenerator.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyles}
+                >
+                  Cookie Policy
+                </a>
+              </li>
             </ul>
             <div className="pt-4">
                <button 

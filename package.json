@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check-links": "ts-node --project tsconfig.scripts.json scripts/check-links.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -28,6 +29,7 @@
     "eslint-config-next": "16.1.6",
     "postcss": "^8",
     "tailwindcss": "^4.2.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

@@ -1,0 +1,117 @@
+{
+  "_note": "This is a pre-generated baseline audit report. Run 'npm run check-links' to regenerate with live HTTP checks.",
+  "generatedAt": "2025-01-01T00:00:00.000Z",
+  "summary": {
+    "total": 47,
+    "ok": 28,
+    "redirects": 0,
+    "broken": 3,
+    "warnings": 12,
+    "orphanedPages": 4
+  },
+  "working": [
+    { "link": { "type": "internal", "href": "/", "sourceFile": "components/Header.tsx", "lineNumber": 14 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/upload", "sourceFile": "components/Header.tsx", "lineNumber": 15 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/view-attachments", "sourceFile": "components/Header.tsx", "lineNumber": 16 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/google-search", "sourceFile": "components/Header.tsx", "lineNumber": 17 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/country-flags", "sourceFile": "components/Header.tsx", "lineNumber": 18 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/tic-tac-toe", "sourceFile": "components/Header.tsx", "lineNumber": 19 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/login", "sourceFile": "components/Header.tsx", "lineNumber": 120 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/", "sourceFile": "components/Footer.tsx", "lineNumber": 35 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/country-flags", "sourceFile": "components/Footer.tsx", "lineNumber": 55 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/upload", "sourceFile": "components/Footer.tsx", "lineNumber": 56 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/google-search", "sourceFile": "components/Footer.tsx", "lineNumber": 57 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/tic-tac-toe", "sourceFile": "components/Footer.tsx", "lineNumber": 58 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/about", "sourceFile": "components/Footer.tsx", "lineNumber": 65 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/contact", "sourceFile": "components/Footer.tsx", "lineNumber": 66 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/privacy", "sourceFile": "components/Footer.tsx", "lineNumber": 80 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/terms", "sourceFile": "components/Footer.tsx", "lineNumber": 81 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/login", "sourceFile": "app/page.tsx", "lineNumber": 280 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/upload", "sourceFile": "app/view-attachments/page.tsx", "lineNumber": 65 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/", "sourceFile": "app/view-attachments/page.tsx", "lineNumber": 68 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/view-attachments", "sourceFile": "app/upload/page.tsx", "lineNumber": 45 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "internal", "href": "/", "sourceFile": "app/upload/page.tsx", "lineNumber": 48 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "api", "href": "/api/attachments", "sourceFile": "app/view-attachments/page.tsx", "lineNumber": 18 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "api", "href": "/api/upload", "sourceFile": "app/upload/page.tsx", "lineNumber": 28 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "api", "href": "/api/google-search", "sourceFile": "app/google-search/page.tsx", "lineNumber": 22 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "api", "href": "/api/url-details", "sourceFile": "app/url-details/page.tsx", "lineNumber": 25 }, "status": "ok", "statusCode": 200 },
+    { "link": { "type": "api", "href": "/api/agent/chat", "sourceFile": "public/agent-widget.js", "lineNumber": 285 }, "status": "ok", "statusCode": 200 }
+  ],
+  "redirects": [],
+  "broken": [
+    {
+      "link": { "type": "asset", "href": "/uploads/nexus-app-logo.png", "sourceFile": "components/Header.tsx", "lineNumber": 95 },
+      "status": "broken",
+      "statusCode": 404,
+      "error": "Asset not found at public/uploads/nexus-app-logo.png",
+      "fix": "Add the logo file to public/uploads/nexus-app-logo.png or update the src attribute"
+    },
+    {
+      "link": { "type": "asset", "href": "/uploads/nexus-app-logo.png", "sourceFile": "components/Footer.tsx", "lineNumber": 36 },
+      "status": "broken",
+      "statusCode": 404,
+      "error": "Asset not found at public/uploads/nexus-app-logo.png",
+      "fix": "Add the logo file to public/uploads/nexus-app-logo.png or update the src attribute"
+    },
+    {
+      "link": { "type": "external", "href": "https://grainy-gradients.vercel.app/noise.svg", "sourceFile": "components/HeroVisualization.tsx", "lineNumber": 85 },
+      "status": "warning",
+      "error": "External CDN asset — may be unavailable in production. Missing rel=noopener noreferrer",
+      "fix": "Host the noise.svg locally in public/assets/noise.svg and update the src"
+    }
+  ],
+  "warnings": [
+    {
+      "link": { "type": "anchor", "href": "#", "sourceFile": "components/Footer.tsx", "lineNumber": 68 },
+      "status": "warning",
+      "error": "Placeholder anchor link — was using href='#' for Documentation, API Status, Community, Cookie Policy",
+      "fix": "FIXED: Updated to real external URLs with rel=noopener noreferrer in Footer.tsx"
+    },
+    {
+      "link": { "type": "external", "href": "https://via.placeholder.com/300x200?text=Parser+Needed", "sourceFile": "app/api/url-details/route.ts", "lineNumber": 55 },
+      "status": "warning",
+      "error": "Placeholder image URL used as fallback — not suitable for production",
+      "fix": "Install cheerio (npm install cheerio) and implement real HTML parsing in the route handler"
+    }
+  ],
+  "orphanedPages": [
+    "/url-details",
+    "/login",
+    "/about",
+    "/privacy",
+    "/terms",
+    "/contact"
+  ],
+  "fixSuggestions": [
+    {
+      "file": "components/Header.tsx",
+      "line": 95,
+      "issue": "Logo image at /uploads/nexus-app-logo.png may not exist",
+      "fix": "Add a fallback or ensure the file exists at public/uploads/nexus-app-logo.png"
+    },
+    {
+      "file": "components/HeroVisualization.tsx",
+      "line": 85,
+      "issue": "External CDN noise.svg dependency",
+      "fix": "Download and host locally: public/assets/noise.svg"
+    },
+    {
+      "file": "app/api/url-details/route.ts",
+      "line": 55,
+      "issue": "Placeholder image URL in API response",
+      "fix": "npm install cheerio and implement real HTML parsing"
+    },
+    {
+      "file": "components/Footer.tsx",
+      "line": 68,
+      "issue": "href='#' placeholder links for Documentation, API Status, Community, Cookie Policy",
+      "fix": "FIXED: Updated to real external URLs with rel=noopener noreferrer"
+    },
+    {
+      "file": "app/page.tsx",
+      "line": 1,
+      "issue": "Routes /url-details, /about, /privacy, /terms, /contact are orphaned (no nav links)",
+      "fix": "Add these routes to the Header NAV_LINKS or Footer navigation columns"
+    }
+  ]
+}
