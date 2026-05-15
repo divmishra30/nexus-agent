@@ -5,15 +5,11 @@ import { useState, useEffect } from 'react';
 
 // Define navigation links
 const NAV_LINKS = [
-  { name: 'Home', href: '/' },
-  { name: 'Flags', href: '/country-flags' },
-  { name: 'Upload', href: '/upload' },
-  { name: 'Attachments', href: '/view-attachments' },
-  { name: 'Search', href: '/google-search' },
-  { name: 'Games', href: '/tic-tac-toe' },
-  { name: 'URL Details', href: '/url-details' },
-  { name: 'About', href: '/about' },
-  { name: 'Contact', href: '/contact' }
+{ name: 'Home', href: '/' },
+{ name: 'Upload', href: '/upload' },
+{ name: 'Attachments', href: '/view-attachments' },
+{ name: 'Search', href: '/google-search' },
+{ name: 'Games', href: '/tic-tac-toe' }
 ];
 
 /**
