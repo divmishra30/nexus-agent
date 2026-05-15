@@ -1,104 +1,67 @@
-import { GoogleGenerativeAI, SchemaType, Schema } from "@google/generative-ai";
 import * as fs from "fs";
 import * as path from "path";
 import { logger } from "./logger";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const GATEWAY_URL = "https://imllm.intermesh.net/v1/chat/completions";
+const GATEWAY_KEY = process.env.GATEWAY_API_KEY || "";
+const MODEL_NAME = "anthropic/claude-sonnet-4-6";
 
 const SYSTEM_PROMPT = `You are a senior full-stack developer AI assistant integrated into a Next.js application.
-Your job is to make PRECISE, MINIMAL, CORRECT code changes that exactly fulfill the user's request — nothing more.
+Your job is to fulfill the user's request COMPLETELY. You are a "Full Task Completion" agent. This means you should not only make the requested change but also identify and implement any supportive changes needed in related components, styles, or layouts to ensure the feature works perfectly and looks premium.
 
 ### DESIGN PHILOSOPHY:
 - **Visual Excellence**: Use harmonious color palettes, subtle gradients, and modern typography (Inter, Roboto).
-- **Interactive Depth**: Hover effects, smooth transitions, defined borders. DO NOT use glassmorphism or backdrop-blur.
-- **Tailwind-First**: ALWAYS use inline Tailwind utility classes. DO NOT create custom CSS unless defining project-wide theme tokens.
+- **Interactive Depth**: Hover effects, smooth transitions, defined borders. Glassmorphism and backdrop-blur are ENCOURAGED for premium headers, sidebars, and overlays.
+- **Tailwind-First**: ALWAYS use inline Tailwind utility classes.
 - **Structural Integrity**: Follow the project's atomic component structure.
 
 ### EDIT FORMAT — CRITICAL RULES:
 
-You have THREE edit action types. Choose the most appropriate:
+You have THREE edit action types:
 
-**1. action: "patch"** — USE THIS for targeted changes to existing files (PREFERRED)
+**1. action: "patch"** — USE THIS for targeted changes to existing files.
    - Provide an array of \`patches\` with \`find\` and \`replace\` strings.
    - The \`find\` string MUST be an exact substring present in the current file.
-   - **Pro-Tip**: The system uses intelligent fuzzy-indentation matching. If you are off by a few spaces, the patch will still apply and the system will auto-correct to the file's original style.
-   - Use enough surrounding context in \`find\` to uniquely identify the location (at least one full line).
+   - Use enough surrounding context in \`find\` to uniquely identify the location.
    - Leave \`content\` as an empty string "".
-   - Example:
-     \`\`\`json
-     {
-       "filePath": "src/app/page.tsx",
-       "action": "patch",
-       "content": "",
-       "patches": [
-         { "find": "lg:grid-cols-3 gap-5", "replace": "lg:grid-cols-4 gap-4" }
-       ]
-     }
-     \`\`\`
 
-**2. action: "modify"** — USE THIS ONLY when structural changes require rewriting the majority of a file.
+**2. action: "modify"** — USE THIS for structural changes or when rewriting a significant portion of a file.
    - Provide the COMPLETE new file content in \`content\`.
-   - NEVER truncate the file. If you cannot write the complete file, use "patch" instead.
+   - NEVER truncate the file.
    - Leave \`patches\` as an empty array [].
 
-**3. action: "create"** — For new files that do not yet exist.
-   - Provide the full new file content in \`content\`.
+**3. action: "create"** — For new files.
 
-**4. action: "delete"** — To delete a file. Leave content and patches empty.
+**4. action: "delete"** — To delete a file.
 
-### SCOPE RULES — READ CAREFULLY:
-- **Minimal Change Principle**: Only change what the user explicitly asked for. Do NOT add extra features, refactors, or "improvements" unless asked.
-- **Single Responsibility**: Each edit in the \`edits\` array should address one clear change.
-- If the change is less than ~15 lines, ALWAYS use "patch" not "modify".
-- If the CURRENT ELEMENT CODE section is provided, make changes ONLY within that code region.
-- NEVER modify a file that is not referenced in PINNED FILES (when pinned files are present).
+### SCOPE & COMPLETION RULES:
+- **End-to-End Fulfillment**: If a user asks for a feature, implement the UI, the state, and any necessary supportive adjustments in parent/sibling files.
+- **Proactive Improvement**: If you see a way to make the requested change "premium" (e.g. adding a blur effect to a sticky header), do it proactively.
+- **Reliability First**: If a file is under 600 lines, PREFER the "modify" action (full file) to ensure perfect structural integrity and avoid patch failures.
+- **Route-Aware Focus**: Prioritize files in the current route's folder, but don't hesitate to modify global layouts or styles if the task requires it.
+- **NO TRUNCATION**: You MUST provide the full file content for "modify" and "create". Never use placeholders like "// ... rest of file". If you truncate or provide empty content, the user's application will break and your changes will be REJECTED.
+- **Empty Content Guard**: If you are using action: "modify", the "content" field MUST NOT BE EMPTY.
+- Respond with valid JSON matching the schema. Summarize everything you changed and WHY in the "reply" field.`;
 
-### ADDITIONAL RULES:
-- **Asset Guardrail**: NEVER assume images exist in public/ unless explicitly provided as attachments.
-- **Dependency Guardrail**: Do NOT import packages not listed in AVAILABLE DEPENDENCIES.
-- **Route-Aware Focus**: If the user is on a specific page (e.g. /search.php) and asks for logic changes on that page, PRIORITIZE editing the files in that specific route's folder. Ignore unrelated forms, banners, or global components unless absolutely necessary. Avoid pulling in dozens of recursive dependencies if they are simple UI skeletons or unrelated forms.
-- **Component-Aware Choice**: If you receive both a wrapper file (e.g., page.tsx) and a child component file (e.g., Form.tsx), and the user asks to change 'internal contents', 'alignment', or 'logic', prioritize editing the child component's file. Do NOT just add utility classes to the wrapper if the change should naturally live inside the child.
-- **No Truncation**: If using "modify", the full file content is mandatory. Every line. No "// ... rest of file".
-- **Phased Implementation**: For complex tasks (e.g. creating a new page), break your response into clear logically-grouped edits. Provide the structure first, then the logic.
-- **Reliability First — FULL FILE PROTOCOL**: If a file is under 1000 lines, ALWAYS use the "modify" action instead of "patch".
-- **Strict Surgical Rule**: If using "patch", NEVER use "..." or any placeholder. You MUST provide the full, exact characters. If unsure, use "modify".
-- **String Safety (CRITICAL)**: In React/TSX files, if a code block contains apostrophes (e.g. IndiaMART's) or complex HTML, you MUST wrap the string in backticks (Template Literals) to avoid unterminated string errors.
-- **Brace & Quote Matching**: Before finalizing your JSON, mentally verify that every opened '{', '[', '(', "'", and '"' is correctly closed. Truncated code is NOT allowed.
-- **Retry Strategy**: If a previous attempt had a syntax error, use the provided line/error information to fix the specific spot. ALWAYS use "modify" for the retry to guarantee a clean file.
-- Respond with valid JSON matching the schema. Summarize WHAT changed and WHY in the "reply" field.`;
-
-const RESPONSE_SCHEMA: Schema = {
-  type: SchemaType.OBJECT,
+const RESPONSE_SCHEMA = {
+  type: "object",
   properties: {
-    reply: { type: SchemaType.STRING },
+    reply: { type: "string" },
     edits: {
-      type: SchemaType.ARRAY,
+      type: "array",
       items: {
-        type: SchemaType.OBJECT,
+        type: "object",
         properties: {
-          filePath: { type: SchemaType.STRING },
-          action: {
-            type: SchemaType.STRING,
-            description: "One of: 'patch', 'modify', 'create', 'delete'"
-          },
-          content: {
-            type: SchemaType.STRING,
-            description: "Full file content for 'create'/'modify'. Empty string for 'patch'/'delete'."
-          },
+          filePath: { type: "string" },
+          action: { type: "string", enum: ["patch", "modify", "create", "delete"] },
+          content: { type: "string" },
           patches: {
-            type: SchemaType.ARRAY,
-            description: "Array of find/replace pairs for 'patch' action. Empty array for other actions.",
+            type: "array",
             items: {
-              type: SchemaType.OBJECT,
+              type: "object",
               properties: {
-                find: {
-                  type: SchemaType.STRING,
-                  description: "Exact substring to find in the current file. Must be unique and include enough context."
-                },
-                replace: {
-                  type: SchemaType.STRING,
-                  description: "The replacement string."
-                }
+                find: { type: "string" },
+                replace: { type: "string" }
               },
               required: ["find", "replace"]
             }
@@ -111,22 +74,114 @@ const RESPONSE_SCHEMA: Schema = {
   required: ["reply", "edits"]
 };
 
-const INTENT_SCHEMA: Schema = {
-  type: SchemaType.OBJECT,
+const INTENT_SCHEMA = {
+  type: "object",
   properties: {
-    refinedPrompt: { type: SchemaType.STRING, description: "A highly detailed and clarified version of the user's request for a code editor." },
-    recommendedFiles: { 
-      type: SchemaType.ARRAY, 
-      items: { type: SchemaType.STRING },
-      description: "Paths or keywords for files that are likely relevant to this request."
-    },
-    isAmbiguous: { type: SchemaType.BOOLEAN, description: "True if the request is too vague to act upon." },
-    clarificationQuestion: { type: SchemaType.STRING, description: "If ambiguous, what question should we ask the user?" },
-    isBigTask: { type: SchemaType.BOOLEAN, description: "True if the task involves creating multiple files, replicating a page, or a major refactor." },
-    requiresRecursiveContext: { type: SchemaType.BOOLEAN, description: "True if the task depends on understanding a deep component tree or import chain." }
+    refinedPrompt: { type: "string" },
+    recommendedFiles: { type: "array", items: { type: "string" } },
+    isAmbiguous: { type: "boolean" },
+    clarificationQuestion: { type: "string" },
+    isBigTask: { type: "boolean" },
+    requiresRecursiveContext: { type: "boolean" }
   },
   required: ["refinedPrompt", "recommendedFiles", "isAmbiguous", "isBigTask", "requiresRecursiveContext"]
 };
+
+/**
+ * Robustly extracts and parses JSON from a string that may contain markdown blocks or extra text.
+ */
+function extractJson(text: string): any {
+  const cleaned = text.trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    // Try to extract content between first '{' and last '}'
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      const jsonStr = cleaned.substring(start, end + 1);
+      try {
+        return JSON.parse(jsonStr);
+      } catch (innerErr: any) {
+        // Try to remove markdown code blocks
+        const markdownMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (markdownMatch && markdownMatch[1]) {
+          try {
+            return JSON.parse(markdownMatch[1].trim());
+          } catch (finalErr: any) {
+            throw new Error(`Failed to parse extracted JSON: ${innerErr.message || String(innerErr)}`);
+          }
+        }
+        throw new Error(`Found JSON markers but failed to parse: ${innerErr.message || String(innerErr)}`);
+      }
+    }
+    throw new Error(`No JSON object found in response.`);
+  }
+}
+
+async function callGateway(messages: any[], responseSchema: any) {
+  if (!GATEWAY_KEY) {
+    throw new Error("GATEWAY_API_KEY is not configured.");
+  }
+
+  const response = await fetch(GATEWAY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${GATEWAY_KEY}`
+    },
+    body: JSON.stringify({
+      model: MODEL_NAME,
+      messages,
+      response_format: { type: "json_object" },
+      temperature: 0.1
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gateway Error (${response.status}): ${errorText}`);
+  }
+
+  const result = await response.json();
+  const content = result.choices[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error("Gateway returned an empty response.");
+  }
+
+  logger.log("📥 Raw LLM Response Content Length:", content.length);
+  // logger.log("📥 Raw LLM Response Content:", content); // Uncomment for deep debugging
+
+  try {
+    const parsed = extractJson(content);
+    
+    // Safety check: ensure edits are meaningful
+    if (parsed.edits && Array.isArray(parsed.edits)) {
+      const originalCount = parsed.edits.length;
+      parsed.edits = parsed.edits.filter((edit: any) => {
+        if ((edit.action === "modify" || edit.action === "create") && (!edit.content || edit.content.trim().length === 0)) {
+          logger.error(`🚫 Rejecting empty content for ${edit.filePath}. RAW CONTENT:`, content);
+          return false;
+        }
+        if (edit.action === "patch" && (!edit.patches || edit.patches.length === 0)) {
+          logger.error(`🚫 Rejecting empty patches for ${edit.filePath}. RAW CONTENT:`, content);
+          return false;
+        }
+        return true;
+      });
+      
+      if (originalCount > 0 && parsed.edits.length === 0) {
+        logger.warn("⚠️ All edits were rejected due to empty content/patches.");
+      }
+    }
+
+    return parsed;
+  } catch (err: any) {
+    logger.error("Failed to parse LLM JSON response:", content);
+    throw new Error(`LLM response was not valid JSON: ${err.message}`);
+  }
+}
 
 export async function askGemini(
   projectStructure: string,
@@ -138,15 +193,8 @@ export async function askGemini(
   pinnedFiles: string[] = [],
   elementCodeSnippet: string = ""
 ): Promise<{ reply: string; edits: Array<{ filePath: string; action: string; content: string; patches?: Array<{ find: string; replace: string }> }> }> {
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-3-flash-preview", 
-    generationConfig: { 
-      responseMimeType: "application/json",
-      responseSchema: RESPONSE_SCHEMA
-    }
-  });
-
-  // 1. Get available dependencies from package.json for the prompt context
+  
+  // 1. Get dependencies and skills for context
   let dependencies = "Unknown";
   try {
     const pkgPath = path.join(process.cwd(), "package.json");
@@ -155,10 +203,20 @@ export async function askGemini(
       dependencies = JSON.stringify({ ...pkg.dependencies, ...pkg.devDependencies }, null, 2);
     }
   } catch (e) {
-    logger.error("Failed to read package.json for dependency context", e);
+    logger.error("Failed to read package.json", e);
   }
 
-  const prompt = `${SYSTEM_PROMPT}
+  let skills = "None defined.";
+  try {
+    const skillsPath = path.join(process.cwd(), "skills.md");
+    if (fs.existsSync(skillsPath)) {
+      skills = fs.readFileSync(skillsPath, "utf-8");
+    }
+  } catch (e) {
+    logger.error("Failed to read skills.md", e);
+  }
+
+  const fullPrompt = `${SYSTEM_PROMPT}
 
 --- PROJECT STRUCTURE ---
 ${projectStructure}
@@ -167,6 +225,10 @@ ${projectStructure}
 --- AVAILABLE DEPENDENCIES ---
 ${dependencies}
 --- END AVAILABLE DEPENDENCIES ---
+
+--- SPECIALIZED SKILLS (PRIORITIZE THESE) ---
+${skills}
+--- END SPECIALIZED SKILLS ---
 
 --- RELEVANT FILE CONTEXT ---
 ${fileContext}
@@ -177,88 +239,63 @@ ${attachments.length > 0 ? attachments.map(a => `- Name: ${a.name}, Type: ${a.ty
 --- END ATTACHMENTS ---
 
 --- CURRENT ELEMENT FOCUS ---
-${currentSelector
-  ? `The user has explicitly selected this element using the browser element picker: "${currentSelector}"
-
-This selector was captured directly from the DOM. The file(s) containing this selector are listed in PINNED FILES below.`
-  : "No specific element selected for this turn. Apply changes globally or infer from the message."}
+${currentSelector ? `Selector: "${currentSelector}"` : "No specific element selected."}
 --- END CURRENT ELEMENT FOCUS ---
 
 --- CURRENT ELEMENT CODE ---
-${elementCodeSnippet
-  ? `The following focused code snippets from the pinned files show the exact location of your selected element. 
-  
-  ⚠️ GUIDANCE: If multiple snippets are provided (e.g., from a parent wrapper and a child component), choose the one that most logically contains the requested change. For 'centering contents' or 'internal logic', prefer editing the child component snippet.
-  
-  Make changes ONLY within these code regions using "patch" actions where possible:
-
-${elementCodeSnippet}`
-  : "No specific code snippets extracted."}
+${elementCodeSnippet ? elementCodeSnippet : "No specific code snippets extracted."}
 --- END CURRENT ELEMENT CODE ---
 
---- PINNED FILES (MANDATORY) ---
-${pinnedFiles.length > 0
-  ? `⚠️ CRITICAL CONSTRAINT: The element selector above was found in the following file(s). You MUST ONLY edit files from this list for this request. DO NOT modify any other file, even if you think it is relevant:
-${pinnedFiles.map(f => `  - ${f}`).join('\n')}
+--- PRIMARY TARGETS ---
+${pinnedFiles.length > 0 ? pinnedFiles.map(f => `  - ${f}`).join('\n') : "No files pinned."}
+--- END PRIMARY TARGETS ---
 
-For any change to these files, PREFER the "patch" action with a precise find/replace. Use "modify" only if the change is structural and touches more than 20 lines.`
-  : "No files pinned. Use your best judgment from the RELEVANT FILE CONTEXT above."}
---- END PINNED FILES ---
+USER REQUEST: ${userMessage}
 
-USER REQUEST: ${userMessage}`;
+Respond STRICTLY with JSON following this schema: ${JSON.stringify(RESPONSE_SCHEMA)}`;
 
-  // 2. Prepare current content parts for multimodal support
-  const parts: any[] = [{ text: prompt }];
+  // 2. Format messages for OpenAI/Gateway
+  const messages: any[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...history.map(h => ({ role: h.role === "model" ? "assistant" : "user", content: h.text })),
+  ];
 
-  // 3. Add attachments if any
+  // 3. Add multimodal content for the latest message
+  const userContent: any[] = [{ type: "text", text: fullPrompt }];
+  
   if (attachments && attachments.length > 0) {
-    logger.log(`📎 Processing ${attachments.length} attachments for Gemini...`);
     for (const attachment of attachments) {
       try {
         const filePath = path.join(process.cwd(), "public", "uploads", attachment.name);
         if (fs.existsSync(filePath)) {
           const buffer = fs.readFileSync(filePath);
-          parts.push({
-            inlineData: {
-              data: buffer.toString("base64"),
-              mimeType: attachment.type
-            }
+          const base64 = buffer.toString("base64");
+          userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${attachment.type};base64,${base64}` }
           });
-          logger.log(`✅ Attached ${attachment.name} (${attachment.type})`);
+          logger.log(`✅ Attached ${attachment.name} to Gateway request.`);
         }
       } catch (err) {
-        logger.error(`❌ Failed to attach file ${attachment.name}:`, err);
+        logger.error(`❌ Failed to attach ${attachment.name}:`, err);
       }
     }
   }
 
-  // 4. Start chat with history
-  const chat = model.startChat({
-    history: history.map(h => ({
-      role: h.role,
-      parts: [{ text: h.text }]
-    }))
-  });
+  messages.push({ role: "user", content: userContent });
 
-  logger.log("📤 Sending prompt to Gemini with Response Schema...");
-  const result = await chat.sendMessage(parts);
-  const text = result.response.text();
-  logger.log("📥 Received response from Gemini.");
-
+  logger.log(`📤 Sending prompt to LLM Gateway (${MODEL_NAME})...`);
   try {
-    const parsed = JSON.parse(text);
-    logger.log(`✅ Parsed Gemini JSON. Edits: ${parsed.edits?.length || 0}`);
+    const result = await callGateway(messages, RESPONSE_SCHEMA);
     return {
-      reply: parsed.reply || "Done.",
-      edits: Array.isArray(parsed.edits) ? parsed.edits : [],
+      reply: result.reply || "Done.",
+      edits: Array.isArray(result.edits) ? result.edits : []
     };
-  } catch (err) {
-    logger.log(`⚠️ Gemini response was not valid JSON even with Schema: ${err instanceof Error ? err.message : String(err)}`);
-    logger.error("Raw response that failed parsing:", text);
-    
+  } catch (err: any) {
+    logger.error("Gateway request failed:", err);
     return {
-      reply: text.length > 500 ? "I encountered an error processing your request. Please try again with more detail." : text,
-      edits: [],
+      reply: `I encountered an error using the LLM Gateway: ${err.message}. Please check your connection and access key.`,
+      edits: []
     };
   }
 }
@@ -276,70 +313,38 @@ export async function analyzeIntent(
   isBigTask: boolean;
   requiresRecursiveContext: boolean;
 }> {
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-3-flash-preview",
-    generationConfig: { 
-      responseMimeType: "application/json",
-      responseSchema: INTENT_SCHEMA
-    }
-  });
-
-  const historyContext = history.length > 0 
-    ? `\n\n--- RECENT CONVERSATION HISTORY ---\n${history.map(h => `${h.role.toUpperCase()}: ${h.text}`).join('\n')}\n--- END HISTORY ---\n\n`
-    : "";
-
   const prompt = `You are a Senior Software Architect and UX Strategist.
 Your job is to translate raw user requests into RIGOROUS technical specifications for a code-editing LLM.
 
 ### YOUR GOAL:
-1. **STRUCTURAL DECOMPOSITION**: If the user asks for a feature, identify all affected layers (UI, State, API, Styles).
-2. **UX ENHANCEMENT**: If the user asks for "premium" or "better" design, infer specific technical requirements:
-   - "Glassmorphism" for sidebars/headers.
-   - "HSL tailored colors" for consistent branding.
-   - "Micro-animations" for interaction.
-3. **CONTEXT SEARCH**: Recommend files based on both content AND structure (e.g. if editing a page, recommend its layout and globals.css).
+1. **STRUCTURAL DECOMPOSITION**: Identify all affected layers (UI, State, API, Styles).
+2. **UX ENHANCEMENT**: Proactively recommend premium design patterns (Glassmorphism, HSL colors, micro-animations).
+3. **CONTEXT SEARCH**: Recommend ALL files needed for a complete implementation.
 4. **PHASED PLANNING**: Refine the prompt to include a step-by-step implementation plan.
-5. **CONTEXTUAL PRECISION**:
-   - **Selector Override**: If a 'CURRENT SELECTOR' is provided, TRUMP any previous element context from history. Focus EXCLUSIVELY on this new element for element-specific requests.
-   - **Context Decay**: If NO 'CURRENT SELECTOR' is provided, do NOT assume the user is still talking about a previously selected element unless they use explicit pronouns (e.g. "it", "that button"). If the request is a general UI change (e.g. "change background to blue"), apply it to the logical container (like the page or a section) rather than the last focused small component.
-   - **Pronoun Resolution**: Only use history to resolve "it", "this", "that" if they clearly refer to a recent action or element.
-6. **COMPLEXITY DETECTION**:
-   - Set **isBigTask** to true if the user asks for a new feature, a page replica, or a "repo-wide" change.
-   - Set **requiresRecursiveContext** to true if the request involves components that likely import many other components.
-
-### ⚠️ SCOPE GUARD — MANDATORY:
-- The refined prompt MUST describe ONLY what the user explicitly asked for.
-- If a CURRENT SELECTOR is provided, the refined prompt MUST NOT add tasks like "responsive checks", "child component scaling", "neighboring components", or any change the user did not ask for.
-- If the user asked to change one class (e.g. "grid-cols-3 → grid-cols-4"), the refinedPrompt should specify exactly that one change. Do not expand scope.
-- The refinedPrompt should result in the minimum number of file edits necessary to accomplish the user's request.
+5. **CONTEXTUAL PRECISION**: Focus on the 'CURRENT SELECTOR' if provided.
 
 --- CURRENT SELECTOR ---
 ${currentSelector || "NONE"}
 --- END SELECTOR ---
 
-${historyContext}--- AVAILABLE ATTACHMENTS ---
-${attachments.length > 0 ? attachments.map(a => `- ${a.name} (${a.type})`).join('\n') : "None"}
---- END ATTACHMENTS ---
+--- HISTORY ---
+${history.map(h => `${h.role}: ${h.text}`).join('\n')}
+--- END HISTORY ---
 
 USER_REQUEST: ${userMessage}
 
-### OUTPUT:
-Provide the JSON following the schema. Ensure 'refinedPrompt' is an expert-level instruction set that is SCOPED to exactly what was asked. If attachments are provided, REFER TO THEM BY THEIR EXACT FILENAME in the 'refinedPrompt'.`;
+Respond STRICTLY with JSON following this schema: ${JSON.stringify(INTENT_SCHEMA)}`;
 
-  logger.log("🔍 Analyzing user intent and refining prompt...");
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
-  
+  const messages = [
+    { role: "system", content: "You are a Senior Software Architect. Respond with valid JSON only." },
+    { role: "user", content: prompt }
+  ];
+
+  logger.log("🔍 Analyzing user intent via LLM Gateway...");
   try {
-    const parsed = JSON.parse(text);
-    if (parsed.isAmbiguous) {
-      logger.log("⚠️ Intent analysis: Request is AMBIGUOUS.");
-    } else {
-      logger.log(`✅ Intent analysis: Request refined. Recommended files: ${parsed.recommendedFiles?.length || 0}`);
-    }
-    return parsed;
+    return await callGateway(messages, INTENT_SCHEMA);
   } catch (err) {
-    logger.error("Failed to parse intent analysis:", text);
+    logger.error("Intent analysis failed:", err);
     return {
       refinedPrompt: userMessage,
       recommendedFiles: [],
