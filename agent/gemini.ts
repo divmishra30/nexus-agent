@@ -197,7 +197,13 @@ export async function askGemini(
   currentSelector: string | null = null,
   pinnedFiles: string[] = [],
   elementCodeSnippet: string = ""
-): Promise<{ reply: string; edits: Array<{ filePath: string; action: string; content: string; patches?: Array<{ find: string; replace: string }> }> }> {
+): Promise<{ 
+  reply: string; 
+  edits: Array<{ filePath: string; action: string; content: string; patches?: Array<{ find: string; replace: string }> }>;
+  commands?: string[];
+  isComplete: boolean;
+  nextStepPrompt?: string;
+}> {
   
   // 1. Get dependencies and skills for context
   let dependencies = "Unknown";
@@ -295,13 +301,17 @@ Respond STRICTLY with JSON following this schema: ${JSON.stringify(RESPONSE_SCHE
     return {
       reply: result.reply || "Done.",
       edits: Array.isArray(result.edits) ? result.edits : [],
-      commands: Array.isArray(result.commands) ? result.commands : []
+      commands: Array.isArray(result.commands) ? result.commands : [],
+      isComplete: result.isComplete !== false,
+      nextStepPrompt: result.nextStepPrompt || ""
     };
   } catch (err: any) {
     logger.error("Gateway request failed:", err);
     return {
       reply: `I encountered an error using the LLM Gateway: ${err.message}. Please check your connection and access key.`,
-      edits: []
+      edits: [],
+      commands: [],
+      isComplete: true
     };
   }
 }

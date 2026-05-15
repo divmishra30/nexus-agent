@@ -473,6 +473,8 @@ INSTRUCTIONS FOR RETRY:
     return NextResponse.json({
       reply: finalReply,
       filesChanged,
+      isComplete: response.isComplete,
+      nextStepPrompt: response.nextStepPrompt,
       commandResults: commandResults.length > 0 ? commandResults : undefined,
       validationErrors: validationErrors.length > 0 ? validationErrors : undefined
     });
