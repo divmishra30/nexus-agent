@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { trackEvent } from '@/lib/gtag';
 
 // Define navigation links — only routes with existing page files are included
 // Link Audit: All routes verified against app/ directory structure
@@ -155,6 +156,14 @@ export default function Header() {
             <Link
               href="/login"
               className="px-6 py-2 bg-white text-black text-sm font-bold rounded-full transition-all duration-300 hover:bg-blue-50 active:scale-95"
+              data-ga-label="sign-in-cta-header-desktop"
+              onClick={() =>
+                trackEvent({
+                  action: 'click',
+                  category: 'Navigation',
+                  label: 'Sign In CTA - Header Desktop',
+                })
+              }
             >
               Sign In
             </Link>
@@ -223,8 +232,16 @@ export default function Header() {
               <Link
                 href="/login"
                 className="w-full py-4 bg-blue-600 text-white text-center font-bold rounded-2xl block hover:bg-blue-700 transition-colors duration-200"
-                onClick={toggleMenu}
+                onClick={() => {
+                  toggleMenu();
+                  trackEvent({
+                    action: 'click',
+                    category: 'Navigation',
+                    label: 'Sign In CTA - Header Mobile',
+                  });
+                }}
                 role="menuitem"
+                data-ga-label="sign-in-cta-header-mobile"
               >
                 Sign In
               </Link>

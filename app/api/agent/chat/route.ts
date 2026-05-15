@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as path from "path";
 import * as fs from "fs";
+import { execSync } from "child_process";
 import { getRelevantFiles, getProjectStructure, indexProject, findFilesBySelector } from "../../../../agent/rag";
 import { askGemini, analyzeIntent } from "../../../../agent/gemini";
 import { logger } from "../../../../agent/logger";
@@ -252,7 +253,7 @@ export async function POST(request: NextRequest) {
       pinnedFiles,
       elementCodeSnippet
     );
-    logger.log(`✨ Gemini Response received. Reply length: ${response.reply.length}, Edits: ${response.edits.length}`);
+    logger.log(`✨ Gemini Response received. Reply length: ${response.reply.length}, Edits: ${response.edits.length}, Commands: ${response.commands?.length || 0}`);
 
     // 7. Apply file edits
     const filesChanged: string[] = [];
@@ -277,13 +278,18 @@ export async function POST(request: NextRequest) {
           continue;
 
         // --- PINNED FILE GUARD ---
+        // Relaxed: Allow edits if the file is pinned OR if it was identified as relevant by RAG.
         if (pinnedFiles.length > 0) {
-          const isAllowed = pinnedFiles.some(
+          const isPinned = pinnedFiles.some(
             pf => edit.filePath === pf || edit.filePath.replace(/\\/g, "/") === pf.replace(/\\/g, "/")
           );
-          if (!isAllowed) {
-            logger.error(`🛡️ BLOCKED edit to unpinned file: ${edit.filePath} (pinned: ${pinnedFiles.join(", ")})`);
-            validationErrors.push(`Edit to "${edit.filePath}" was blocked — only pinned files matching the selected element may be modified.`);
+          const isRelevant = relevantFiles.some(
+            rf => edit.filePath === rf.relativePath || edit.filePath.replace(/\\/g, "/") === rf.relativePath.replace(/\\/g, "/")
+          );
+          
+          if (!isPinned && !isRelevant && edit.action !== "create") {
+            logger.error(`🛡️ BLOCKED edit to non-contextual file: ${edit.filePath}`);
+            validationErrors.push(`Edit to "${edit.filePath}" was blocked — this file is outside the current task context.`);
             continue;
           }
         }
@@ -432,6 +438,24 @@ INSTRUCTIONS FOR RETRY:
       indexProject(PROJECT_ROOT);
     }
 
+    // 8. Execute commands if any
+    const commandResults: string[] = [];
+    if (response.commands && response.commands.length > 0) {
+      logger.log(`🚀 Executing ${response.commands.length} commands...`);
+      for (const cmd of response.commands) {
+        try {
+          logger.log(`🏃 Running: ${cmd}`);
+          const output = execSync(cmd, { cwd: PROJECT_ROOT, encoding: 'utf-8' });
+          commandResults.push(`✅ Success: ${cmd}`);
+          logger.log(`✅ Command succeeded: ${cmd}`);
+        } catch (err: any) {
+          const errorMsg = err.stderr || err.message;
+          commandResults.push(`❌ Failed: ${cmd} (${errorMsg})`);
+          logger.error(`❌ Command failed: ${cmd}`, errorMsg);
+        }
+      }
+    }
+
     let finalReply = response.reply;
     if (validationErrors.length > 0) {
       const blocked = validationErrors.filter(e => e.includes("was blocked"));
@@ -449,6 +473,7 @@ INSTRUCTIONS FOR RETRY:
     return NextResponse.json({
       reply: finalReply,
       filesChanged,
+      commandResults: commandResults.length > 0 ? commandResults : undefined,
       validationErrors: validationErrors.length > 0 ? validationErrors : undefined
     });
   } catch (err: unknown) {

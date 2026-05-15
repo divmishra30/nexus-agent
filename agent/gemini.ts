@@ -41,6 +41,7 @@ You have THREE edit action types:
 - **Route-Aware Focus**: Prioritize files in the current route's folder, but don't hesitate to modify global layouts or styles if the task requires it.
 - **NO TRUNCATION**: You MUST provide the full file content for "modify" and "create". Never use placeholders like "// ... rest of file". If you truncate or provide empty content, the user's application will break and your changes will be REJECTED.
 - **Empty Content Guard**: If you are using action: "modify", the "content" field MUST NOT BE EMPTY.
+- **Command Execution**: If a task requires installing a package (e.g. \`npm install lucide-react\`) or running a script, include it in the \`commands\` array. ONLY use standard, non-interactive commands.
 - Respond with valid JSON matching the schema. Summarize everything you changed and WHY in the "reply" field.`;
 
 const RESPONSE_SCHEMA = {
@@ -69,6 +70,10 @@ const RESPONSE_SCHEMA = {
         },
         required: ["filePath", "action", "content", "patches"]
       }
+    },
+    commands: {
+      type: "array",
+      items: { type: "string" }
     }
   },
   required: ["reply", "edits"]
@@ -289,7 +294,8 @@ Respond STRICTLY with JSON following this schema: ${JSON.stringify(RESPONSE_SCHE
     const result = await callGateway(messages, RESPONSE_SCHEMA);
     return {
       reply: result.reply || "Done.",
-      edits: Array.isArray(result.edits) ? result.edits : []
+      edits: Array.isArray(result.edits) ? result.edits : [],
+      commands: Array.isArray(result.commands) ? result.commands : []
     };
   } catch (err: any) {
     logger.error("Gateway request failed:", err);
