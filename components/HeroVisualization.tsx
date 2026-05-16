@@ -90,7 +90,7 @@ export default function HeroVisualization() {
           }}
         />
         {/* Grid Overlay */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100"></div>
+        <div className="absolute inset-0 bg-[url('/assets/noise.svg')] opacity-20 brightness-100"></div>
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:40px_40px]"></div>
       </div>
 

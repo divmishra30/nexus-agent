@@ -552,7 +552,7 @@ function resolveImportToPath(importPath: string, currentFile: string): string | 
   
   // Handle Alias @/
   if (resolved.startsWith("@/")) {
-    resolved = resolved.replace("@/", "src/");
+    resolved = resolved.replace("@/", "");
   } else if (resolved.startsWith("./") || resolved.startsWith("../")) {
     const currentDir = path.dirname(currentFile);
     resolved = path.join(currentDir, resolved).replace(/\\/g, "/");

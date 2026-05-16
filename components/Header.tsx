@@ -9,11 +9,6 @@ import { trackEvent } from '@/lib/gtag';
 // Link Audit: All routes verified against app/ directory structure
 const NAV_LINKS = [
   { name: 'Home', href: '/' },
-  { name: 'Upload', href: '/upload' },
-  { name: 'Attachments', href: '/view-attachments' },
-  { name: 'Search', href: '/google-search' },
-  { name: 'Flags', href: '/country-flags' },
-  { name: 'Games', href: '/tic-tac-toe' },
 ];
 
 /**
@@ -151,23 +146,6 @@ export default function Header() {
           </ul>
 
           <div className="flex items-center ml-4 gap-4">
-            <div className="h-8 w-px bg-white/20" />
-
-            <Link
-              href="/login"
-              className="px-6 py-2 bg-white text-black text-sm font-bold rounded-full transition-all duration-300 hover:bg-blue-50 active:scale-95"
-              data-ga-label="sign-in-cta-header-desktop"
-              onClick={() =>
-                trackEvent({
-                  action: 'click',
-                  category: 'Navigation',
-                  label: 'Sign In CTA - Header Desktop',
-                })
-              }
-            >
-              Sign In
-            </Link>
-
             <div id="google_translate_element_desktop" className="google-translate-widget scale-90 origin-right"></div>
           </div>
         </div>
@@ -228,24 +206,6 @@ export default function Header() {
                 </li>
               );
             })}
-            <li role="none" className="pt-4">
-              <Link
-                href="/login"
-                className="w-full py-4 bg-blue-600 text-white text-center font-bold rounded-2xl block hover:bg-blue-700 transition-colors duration-200"
-                onClick={() => {
-                  toggleMenu();
-                  trackEvent({
-                    action: 'click',
-                    category: 'Navigation',
-                    label: 'Sign In CTA - Header Mobile',
-                  });
-                }}
-                role="menuitem"
-                data-ga-label="sign-in-cta-header-mobile"
-              >
-                Sign In
-              </Link>
-            </li>
           </ul>
 
           <div className="mt-auto pb-12 text-center text-white/40 text-sm">

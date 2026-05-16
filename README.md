@@ -42,16 +42,28 @@ For a deep dive into our technical journey, implementation mapping, and team rol
 
 ## ⚡ Quick Start
 
-1. **Configure Environment**:
+1. **Clone the Repository**:
    ```bash
-   # .env
+   git clone https://github.com/divmishra30/nexus-agent
+   cd nexus-agent
+   ```
+
+2. **Configure Environment**:
+   Create a `.env` file in the root directory:
+   ```bash
    GATEWAY_API_KEY=your_internal_gateway_key
    ```
 
-2. **Launch Development Server**:
+3. **Install & Launch**:
    ```bash
+   npm install
    npm run dev
    ```
 
-3. **Interact**:
+4. **Interact**:
    Click the Nexus icon in the bottom right to start your autonomous development session.
+
+
+5. **Example Command**:
+   Try asking the Nexus Agent:
+   > "Create a premium Tic-Tac-Toe game page and add it to the header navigation."
