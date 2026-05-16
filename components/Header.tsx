@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { trackEvent } from '@/lib/gtag';
 
 // Define navigation links — only routes with existing page files are included
 // Link Audit: All routes verified against app/ directory structure
